@@ -1,6 +1,6 @@
 get_cumulant1(data_matrix::Matrix) = Float64[mean(data_matrix[:,i]) for i = 1:n]
 
-get_cumulant2(data_matrix::Matrix) = (cov(data_matrix))
+get_cumulant2(data_matrix::Matrix) = (cov(data_matrix, corrected = false))
 
 
 function get_cumulant3{T<:AbstractFloat}(data_matrix::Matrix{T})
