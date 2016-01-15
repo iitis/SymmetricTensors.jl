@@ -12,6 +12,7 @@ type Grass
   rsvd::Base.LinAlg.SVD     # SVD of the local coordinates of rtan
 
   Grass()=new()
+  Grass(x::Tuple{Int, Int}) = new(x)
 end
 
 function Grass(dim::Array{Int,1})

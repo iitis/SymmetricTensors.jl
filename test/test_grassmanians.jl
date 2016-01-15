@@ -1,23 +1,59 @@
-# using Grassmanians
+using FactCheck
+import Base.norm
+include("../src/grassmanians.jl")
 
-# This file contains examples of operations on
-# grass-class objects.
-#
-# Copyright 2008.
-# Berkant Savas, LinkÃ¶ping University.
+facts("test orth") do
+  n, r = 2, 2
+  X = orth(randn(n, r))
+  @fact norm(X'*X - eye(r)) --> roughly(0., atol=1e-14)
 
-## Initiate necessary variables
-n = 5
-r = 2
+  n, r = 42, 13
+  X = orth(randn(n, r))
+  @fact norm(X'*X - eye(r)) --> roughly(0., atol=1e-14)
 
+  n, r = 5, 2
+  X = orth(randn(n, r))
+  Tg  = (eye(n) - X*X')*randn(n,r)
+  Tg2 = (eye(n) - X*X')*randn(n,r)
 
+  @fact norm(Tg'*X) --> roughly(0., atol=1e-14)
+  @fact norm(Tg2'*X) --> roughly(0., atol=1e-14)
+end
 
+facts("test set") do
+
+  context("test simple methods") do
+    n, r = 5, 2
+    X = orth(randn(n, r))
+    g = Grass((n, r))
+    set!(g, :data, X)
+    @fact g.data --> X
+    @fact g.dim --> (n, r)
+
+    n, r = 5, 3
+    X = orth(randn(n, r))
+    set!(g, :data, X)
+    @fact g.data --> X
+    @fact g.dim --> (n, r)
+
+    Tg  = (eye(n) - X*X')*randn(n,r)
+    Tg2 = (eye(n) - X*X')*randn(n,r)
+
+    set!(g, :tan, Tg)
+    @fact g.tan --> Tg
+    @fact g.svd --> svdfact(Tg)
+
+    set!(g, :tan2, Tg2)
+    @fact g.tan2 --> Tg2
+  end
+end
+
+exit(42)
 X  = orth(randn(n,r))  # A point on Gr(n,r)
 
 
 # Global coordinates for two tangents.
-Tg  = (eye(n) - X*X')*randn(n,r)
-Tg2 = (eye(n) - X*X')*randn(n,r)
+
 # Declare the grass-object and initiate some fields.
 g = Grass([n,r])
 set!(g,:data,X)
