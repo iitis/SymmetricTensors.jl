@@ -86,3 +86,5 @@ function get_cumulant4{T<:AbstractFloat}(data_matrix::Matrix{T})
     end
     return Array(cumulantT4)
 end
+
+norm_tensor(A) = (norm(vec(A), 2)^2)/2

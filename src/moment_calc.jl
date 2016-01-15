@@ -5,6 +5,8 @@ using Iterators
 using PyPlot
 using MAT
 
+
+
 percentage_error(result, value) = (result - value)/value
 
 modify(data) = (size(data,1)-1)/size(data,1)
@@ -23,7 +25,7 @@ function cov_calc(data, n)
     results = zeros(n,3)
     for i = 1:n
         linear_comb = data*X1[:,i]
-        results[i,:] = [S[i], cov(linear_comb), percentage_error(S[i], cov(linear_comb))]
+        results[i,:] = [S[i]/modify(data), cov(linear_comb), percentage_error(S[i]/modify(data), cov(linear_comb))]
     end
     results, X1, S
 end
