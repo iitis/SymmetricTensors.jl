@@ -6,3 +6,12 @@ function read_hyperspectral(file, slise)
     n,m,l = size(tab)
     reshape(tab, n*m,l), l
 end  
+
+
+function read_hyperspectral1(file, slice)
+    var = npzread(file)
+    tab = var[:,1:slice:end]
+    n,l = size(tab)
+    tab, l
+end  
+

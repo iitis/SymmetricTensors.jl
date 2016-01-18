@@ -1,6 +1,7 @@
 using MAT
 
 
+
 function proceed()
   path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"
   include(path*"cumulants.jl")
@@ -8,7 +9,7 @@ function proceed()
   include(path*"moment_calc.jl")
   rmprocs(workers())
   addprocs()
-  data, n = read_hyperspectral("indian_pines_hyperspectral.npy", 5)
+    data, n = read_hyperspectral1("test.npy", 1)
   data = data/maximum(data)
   C2 = get_cumulant2(data)
   r, X2, S = cov_calc(C2, n)
@@ -25,3 +26,5 @@ function proceed()
       "X4" => X4
   ))
 end
+
+proceed()

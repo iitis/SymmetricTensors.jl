@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Demo for testing transforms in hyperspectral data classification.
+"""
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.decomposition import RandomizedPCA
+from sklearn.neighbors import KNeighborsClassifier
+
+sys.path.append('low_rank_tensor_approx') # probably wants to modify that
+
+from m_hsbase import load_indian_pines
+from util import prepare_hsdata, accuracy
+from util import visualize_classes, visualize_training
+from scipy import io
+
+# ----------------------------------------------------------------------------
+
+def reduce_X_dimension(X):
+    """Reduce number of spectral features."""
+    return X[:,40:110]
+
+# ----------------------------------------------------------------------------
+
+class TransformNone(object):
+    """Nothing"""
+    
+    def fit(self, X):
+        pass
+    
+    def transform(self, X):
+        return X
+
+# ----------------------------------------------------------------------------
+
+class TransformPCA(object):
+    """PCA n_c=7"""
+    
+    def fit(self, X):
+        self.pca = RandomizedPCA(3).fit(X)
+    
+    def transform(self, X):
+        return self.pca.transform(X)
+
+# ----------------------------------------------------------------------------
+
+class TransformCumulants(object):
+    """Cumulants"""
+
+
+
+    def fit(self, X):
+        np.save('test.npy', X)
+
+        def run_jm(dir):
+            import numpy as np
+            import subprocess
+            import matlab.engine
+            subprocess.call(["julia", "get_cu.jl"])
+            eng = matlab.engine.start_matlab()
+            eng.addpath(dir)
+            k3=3
+            k4=3
+            U3, U4 = eng.lrtd(k3, k4, nargout=2)
+            return np.mat(U3), np.mat(U4)
+
+        directory = '/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/'
+        self.U3, self.U4 = run_jm(directory)
+        self.pca = RandomizedPCA(3).fit(X)
+
+    def transform(self, X):
+        # return np.hstack([self.pca.transform(X), X*self.U3,X*self.U4])
+        # return np.hstack([X*self.U3,X*self.U4])
+        return X*self.U4
+
+# ----------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    hsdata = load_indian_pines('low_rank_tensor_approx/m_hsbase/data/')
+    hsdata = prepare_hsdata(hsdata)
+    X, y, idx = hsdata['X'], hsdata['y'], hsdata['train1all']
+    
+    X = reduce_X_dimension(X) # if needed, reduce X dimension
+
+    # display selection of training data and ground truth
+    plt.figure()
+    visualize_training(hsdata)
+    plt.gcf().canvas.set_window_title('Training/test data')
+    plt.figure()
+    plt.imshow(hsdata['truth'], interpolation='nearest', cmap=plt.cm.spectral)
+    plt.gcf().canvas.set_window_title('Ground truth')
+
+    # test several transforms
+    n_neighbors = 3
+    for tt in [TransformNone(), TransformPCA(), TransformCumulants()]:
+        knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+        X_train, y_train = X[idx], y[idx]
+        tt.fit(X_train) #zachowuje U1 U2 U3 - stworzyl je
+        # moge zapisac X do pliku, wywolac z Julii, zapisac, wywolac z MATLABA i zapisac
+        #wywolac proces w Pythonie z Juyli
+        Z_train = tt.transform(X_train)  #dostaje X a zwraca U1'X + U2'X + U3'X
+        knn.fit(Z_train, y_train)
+        Z = tt.transform(X)
+        hsdata['yp'] = knn.predict(Z)
+        accuracy(hsdata)
+        plt.figure()
+        visualize_classes(hsdata)
+        info = 'Classifier (KNN, n={})'.format(n_neighbors)
+        info += ', transform={}'.format(tt.__doc__)
+        plt.gcf().canvas.set_window_title(info)
+    plt.show()
