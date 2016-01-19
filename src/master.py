@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import RandomizedPCA
 from sklearn.neighbors import KNeighborsClassifier
+from matplotlib.backends.backend_pdf import PdfPages
+
 
 sys.path.append('low_rank_tensor_approx') # probably wants to modify that
 
@@ -20,7 +22,7 @@ from scipy import io
 
 def reduce_X_dimension(X):
     """Reduce number of spectral features."""
-    return X[:,40:110]
+    return X[:,70:130]
 
 # ----------------------------------------------------------------------------
 
@@ -36,10 +38,10 @@ class TransformNone(object):
 # ----------------------------------------------------------------------------
 
 class TransformPCA(object):
-    """PCA n_c=7"""
+    """PCA n_c=5"""
     
     def fit(self, X):
-        self.pca = RandomizedPCA(3).fit(X)
+        self.pca = RandomizedPCA(5).fit(X)
     
     def transform(self, X):
         return self.pca.transform(X)
@@ -47,33 +49,43 @@ class TransformPCA(object):
 # ----------------------------------------------------------------------------
 
 class TransformCumulants(object):
-    """Cumulants"""
-
-
+    """Cumulants k_3 = 2, k_4 = 2, n_c = 5"""
 
     def fit(self, X):
         np.save('test.npy', X)
 
         def run_jm(dir):
-            import numpy as np
             import subprocess
             import matlab.engine
             subprocess.call(["julia", "get_cu.jl"])
             eng = matlab.engine.start_matlab()
             eng.addpath(dir)
-            k3=3
-            k4=3
+            k3=2
+            k4=2
             U3, U4 = eng.lrtd(k3, k4, nargout=2)
             return np.mat(U3), np.mat(U4)
+        def pca(x, n):
+            from scipy import cov, linalg
+            y = cov(np.transpose(x))
+            [E,U]=linalg.eigh(y)
+            sorted_indices_desc = E.real.argsort()[::-1] #first sort, then reverse
+            return np.asmatrix(U[:, sorted_indices_desc])
+
+
+
 
         directory = '/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/'
         self.U3, self.U4 = run_jm(directory)
-        self.pca = RandomizedPCA(3).fit(X)
+        #self.pca = RandomizedPCA(4).fit(X)
+        self.U2 = pca(X,5)
 
     def transform(self, X):
-        # return np.hstack([self.pca.transform(X), X*self.U3,X*self.U4])
-        # return np.hstack([X*self.U3,X*self.U4])
-        return X*self.U4
+        features_v = np.hstack([X*self.U2, X*self.U3,X*self.U4])
+        print(features_v)
+        return features_v
+        #return np.hstack([self.pca.transform(X), X*self.U4])
+        #return np.hstack([X*self.U3,X*self.U4])
+        #return X*self.U3
 
 # ----------------------------------------------------------------------------
 
@@ -92,6 +104,7 @@ if __name__ == '__main__':
     plt.imshow(hsdata['truth'], interpolation='nearest', cmap=plt.cm.spectral)
     plt.gcf().canvas.set_window_title('Ground truth')
 
+    pp = PdfPages('par_5_2_2_5_dat70_130.pdf') #KD added line
     # test several transforms
     n_neighbors = 3
     for tt in [TransformNone(), TransformPCA(), TransformCumulants()]:
@@ -105,9 +118,12 @@ if __name__ == '__main__':
         Z = tt.transform(X)
         hsdata['yp'] = knn.predict(Z)
         accuracy(hsdata)
-        plt.figure()
+        plot = plt.figure()
         visualize_classes(hsdata)
         info = 'Classifier (KNN, n={})'.format(n_neighbors)
         info += ', transform={}'.format(tt.__doc__)
         plt.gcf().canvas.set_window_title(info)
+        plt.text(0,157,str(info), fontsize = 10) #KD added line
+        pp.savefig(plot) #KD added line
+    pp.close() #KD added line
     plt.show()
