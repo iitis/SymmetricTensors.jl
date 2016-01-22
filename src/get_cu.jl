@@ -1,23 +1,22 @@
+include(joinpath(path,"cumulants.jl"))
+path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"
+include(joinpath(path,"read_pictures.jl"))
+using Cumulants
 using MAT
 
-
-
-function proceed()
-  path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"
-  include(path*"cumulants.jl")
-  include(path*"read_pictures.jl")
-  include(path*"moment_calc.jl")
-  rmprocs(workers())
-  addprocs()
-    data, n = read_hyperspectral1("test.npy", 1)
+function calc_cumulants(infile, outfile)
+  if nprocs()==1
+    addprocs()
+  end
+  data::Matrix{Float32} = read_hyperspectral(infile)
   data = data/maximum(data)
-  C2 = get_cumulant2(data)
-  r, X2, S = cov_calc(C2, n)
-  C3 = get_cumulant3(convert(Array{Float32,2},data))
+  C2 = cumulant2(data)
+  X2 = hosvd(C2).matrices[1]
+  C3 = cumulant3(data)
   X3 = hosvd(C3).matrices[1]
-  C4 = get_cumulant4(convert(Array{Float32,2},data))
+  C4 = cumulant4(data)
   X4 = hosvd(C4).matrices[1]
-  matwrite("cumulants.mat", Dict{Any,Any}(
+  matwrite(outfile, Dict{Any,Any}(
       "C2" => C2,
       "C3" => C3,
       "C4" => C4,
@@ -27,4 +26,4 @@ function proceed()
   ))
 end
 
-proceed()
+calc_cumulants("test.npy", "cumulants.mat")
