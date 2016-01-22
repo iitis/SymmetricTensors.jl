@@ -46,11 +46,9 @@ function cumulant4{T<:AbstractFloat}(data::Matrix{T})
     n = size(data, 2)
     cumulantT4 = SharedArray(T, n, n, n, n)
 
-    for i = 1:n, j = i:n, k = j:n
-      @sync @parallel for l = k:n
-            println("przed $i, $j, $k, $l")
-            a = 1.0#cumulant4element(data[:,i], data[:,j], data[:,k], data[:,l])
-            println("po $i, $j, $k, $l")
+    @sync @parallel for i = 1:n
+      for  j = i:n, k = j:n, l = k:n
+            a = cumulant4element(data[:,i], data[:,j], data[:,k], data[:,l])
             cumulantT4[i,j,k,l] = a
             cumulantT4[l,j,k,i] = a
             cumulantT4[i,l,k,j] = a
