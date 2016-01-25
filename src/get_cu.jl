@@ -1,6 +1,6 @@
-include(joinpath(path,"cumulants.jl"))
 path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"
 include(joinpath(path,"read_pictures.jl"))
+include(joinpath(path,"cumulants.jl"))
 using Cumulants
 using MAT
 

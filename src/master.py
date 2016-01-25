@@ -102,7 +102,7 @@ if __name__ == '__main__':
     hsdata = prepare_hsdata(hsdata)
     X, y, idx = hsdata['X'], hsdata['y'], hsdata['train1all']
     l = 70
-    u = 130
+    u = 80
     X = reduce_X_dimension(X, l, u) # if needed, reduce X dimension
 
     # display selection of training data and ground truth
