@@ -1,14 +1,19 @@
 path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"
 include(joinpath(path,"read_pictures.jl"))
 include(joinpath(path,"Cumulants.jl"))
-using Cumulants
+
 using MAT
 using Tensors
-
 function calc_cumulants(infile, outfile)
-  if nprocs()==1
+if nprocs() == 1
     addprocs()
-  end
+end
+@everywhere begin
+path = "/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/pictures_tensor/low_rank_tensor_approx/low-rank-tensor-approximation/src/"   
+include(path*"Cumulants.jl")
+    using Cumulants
+end
+
   data::Matrix{Float32} = read_hyperspectral(infile)
   data = data/maximum(data)
   C2 = cumulant2(data)
