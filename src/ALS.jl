@@ -16,9 +16,9 @@ function calc(infile1, infile2, infile3, outfile)
   
   function phi_calc{T<:AbstractFloat}(C2::Matrix{T}, C3::Array{T}, C4::Array{T})
   k::Int32 = npzread("parameter.npy")
-      w_2 = 1/2
-      w_3 = 1/6
-      w_4 = 1/24
+      w_2 = 1
+      w_3 = 1
+      w_4 = 1
       Uc = Tensors.left_singular_vectors(hcat(w_2*C2,w_3*Tensors.unfold(C3, 1),w_4*Tensors.unfold(C4, 1)))[:,1:k]
       U_f = []
       for i = 0:10

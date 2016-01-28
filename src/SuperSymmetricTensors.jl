@@ -12,8 +12,8 @@ function BCSS{T<:Real}(mat::Symmetric{T}, blocksize::Int)
     rows = size(mat, 1)÷blocksize
     columns = size(mat, 2)÷blocksize
     data = Dict()
-    for i=1:rows, j=1:cols
-        data[(i,j)]=mat[i:blocksize:i+1, i:blocksize:i+1]
+    for i=1:rows, j=1:columns   # w pętli nie ponizej
+        data[(i,j)]=mat[i:blocksize:i+1, j:blocksize:j+1]
     end
     BCSS(data)
 end
