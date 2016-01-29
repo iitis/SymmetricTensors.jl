@@ -14,14 +14,14 @@ function calc(infile1, infile2, infile3, outfile)
 
   
   
-  function phi_calc{T<:AbstractFloat}(C2::Matrix{T}, C3::Array{T}, C4::Array{T})
+  function phi_calc{T<:AbstractFloat}(C2::Matrix{T}, C3::Array{T}, C4::Array{T}, tol2::Float64, tol3::Float64, tol4::Float64)
   k::Int32 = npzread("parameter.npy")
       w_2 = 1
       w_3 = 1
       w_4 = 1
       Uc = Tensors.left_singular_vectors(hcat(w_2*C2,w_3*Tensors.unfold(C3, 1),w_4*Tensors.unfold(C4, 1)))[:,1:k]
-      U_f = []
-      for i = 0:10
+      r = 0
+      for s = 0:50
 	  T3 = C3
 	  for i = 2:3
 	      T3 = Tensors.modemult(T3, Uc', i)
@@ -41,17 +41,25 @@ function calc(infile1, infile2, infile3, outfile)
 	  end
 	  C_2 = Uc'*C2*Uc
 
-	  println(norm_tensor(C_2)/norm_tensor(C2))
-	  println(norm_tensor(C_3)/norm_tensor(C3))
-	  println(norm_tensor(C_4)/norm_tensor(C4))
+	  t2 = (norm_tensor(C2)-norm_tensor(C_2))/norm_tensor(C2)
+	  t3 = (norm_tensor(C3)-norm_tensor(C_3))/norm_tensor(C3)
+	  t4 = (norm_tensor(C4)-norm_tensor(C_4))/norm_tensor(C4)
+
+	  println(t2)
+	  println(t3)
+	  println(t4)
 	  println("....next itter....")
-	  U_f = Uc
+        
+	  r +=1       
+	  if r >= 11 && t2 < tol2 && t3 < tol3 && t4 < tol4
+	      break
+	  end
       end
-      U_f
+      Uc
   end
 
   function write(filename)
-    U_f::Matrix{Float32} = phi_calc(C2, C3, C4);
+    U_f::Matrix{Float32} = phi_calc(C2, C3, C4, 0.0001, 0.001, 0.001);
     npzwrite(filename, U_f)
   end
 
