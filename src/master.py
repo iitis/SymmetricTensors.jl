@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import RandomizedPCA, NMF
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.cluster import MeanShift, estimate_bandwidth
+from sklearn.mixture import GMM
 from matplotlib.backends.backend_pdf import PdfPages
+from sklearn.cluster import KMeans
 
 
 sys.path.append('low_rank_tensor_approx') # probably wants to modify that
@@ -45,10 +48,10 @@ class TransformPCA(object):
         self.k2_pca = k2_pca
 
     def __str__(self):
-        return "PCA, n_c = {}".format( self.k2_pca)
+        return "PCA, n_c = {}".format(self.k2_pca)
     
     def fit(self, X):
-        self.pca = RandomizedPCA(k2_pca).fit(X)
+        self.pca = RandomizedPCA(self.k2_pca).fit(X)
     
     def transform(self, X):
         return self.pca.transform(X)
@@ -73,15 +76,19 @@ class TransformNMF(object):
 
 class TransformPhi(object):
 
-    def __init__(self, k2):
+    def __init__(self, k2, w2, w3, w4):
         self.k2 = k2
+        self.w2 = w2
+        self.w3 = w3
+        self.w4 = w4
 
 
     def __str__(self):
-        return "Cumulants_common k = {}".format(self.k2)
+        return "Cumulants k = {}".format(self.k2)
 
     def fit(self, X):
-        @mem.cache
+        X = np.mat(X)
+        #@mem.cache
         def cumulants(X):
             import subprocess
             np.save('test.npy', X)
@@ -96,8 +103,8 @@ class TransformPhi(object):
             np.save('U2.npy', U2)
 
 
-        cumulants(X)
-        np.save('parameter.npy', k2)
+        #cumulants(X)
+        np.save('parameter.npy', [self.k2, self.w2, self.w3, self.w4])
         #pca_save(X, k2)
         import subprocess
         subprocess.call(["julia", "ALS.jl"])
@@ -112,14 +119,12 @@ class TransformPhi(object):
 
 # ----------------------------------------------------------------------------
 
-
-
-if __name__ == '__main__':
+def supervised():
     hsdata = load_indian_pines('low_rank_tensor_approx/m_hsbase/data/')
     hsdata = prepare_hsdata(hsdata)
     X, y, idx = hsdata['X'], hsdata['y'], hsdata['train1all']
     l = 0
-    u = 130
+    u = 80
     X = reduce_X_dimension(X, l, u) # if needed, reduce X dimension oryginalne dane
     #np.save('X.npy', X)
 
@@ -131,7 +136,7 @@ if __name__ == '__main__':
     plt.figure()
     plt.imshow(hsdata['truth'], interpolation='nearest', cmap=plt.cm.spectral)
     plt.gcf().canvas.set_window_title('Ground truth')
-    k = 8
+    k = 6
 
     k2_pca = k
     k2 = k
@@ -139,7 +144,7 @@ if __name__ == '__main__':
 
     pp = PdfPages('par_'+str(k2_pca)+'_'+str(k2_nf)+'_'+str(k2)+'_dat'+str(l)+'_'+str(u)+'.pdf') #KD added line
     # test several transforms
-    n_neighbors = 3
+    n_neighbors = 2
     for tt in [TransformNone(), TransformPCA(k2_pca), TransformPhi(k2), TransformNMF(k2_nf)]:
         knn = KNeighborsClassifier(n_neighbors=n_neighbors)
         X_train, y_train = X[idx], y[idx]
@@ -160,3 +165,68 @@ if __name__ == '__main__':
         pp.savefig(plot) #KD added line
     pp.close() #KD added line
     plt.show()
+
+
+def unsupervised(k):
+    sys.path.append('low_rank_tensor_approx/m_hsbase')
+    from cube_explore import load_envi
+    ddir = 'low_rank_tensor_approx/m_hsbase/pictures/'
+    hsdata = load_envi(ddir + 'apples_0')
+    n_v = hsdata['data'].shape[2]
+    X = np.array(hsdata['data'].reshape((-1, n_v)), float)
+
+
+    #k = 8
+    k2_pca = k
+    k2 = k
+    k2_nf = k
+    w2 = 0.001
+    w3 = 10
+    w4 = 10
+    n_clusters = 10
+    name = "KMeans_n_cl="
+    #name = "Mean_shift_n_samples = "
+    #name = "GMM_n_comp="
+    #samples = 30
+    samples = n_clusters
+    #samples = 8
+
+
+    pp = PdfPages('un_k='+str(k)+'_'+str(name)+str(samples)+'w='+str(w2)+'_'+str(w3)+'_'+str(w4)+'.pdf') #KD added line
+    # test several transforms
+
+    # for tt in [TransformNone(), TransformPCA(k2_pca), TransformNMF(k2_nf),  TransformPhi(k2)]:
+    for tt in [TransformPCA(k2_pca), TransformNMF(k2_nf),  TransformPhi(k2, w2, w3, w4)]:
+        print tt
+        tt.fit(X)
+        Z = tt.transform(X)
+        if "KMeans" in name:
+            kmeans_model = KMeans(n_clusters=n_clusters, random_state=1)
+            y = kmeans_model.fit_predict(Z)
+        if "Mean_shift" in name:
+            bandwidth = estimate_bandwidth(Z, quantile=0.2, n_samples=samples)
+            ms = MeanShift(bandwidth = bandwidth, bin_seeding=True)
+            y = ms.fit_predict(Z)
+        if "GMM" in name:
+            ggm = GMM(n_components = samples)
+            y = ggm.fit_predict(Z)
+
+
+        fig, ax = plt.subplots(2, 1, squeeze=True)
+        #info = 'Clasificator (KMeans, n={})'.format(n_clusters)
+        info = name+str(samples)
+        info += ', transform={}'.format(str(tt))
+        ax[0].set_title(info)
+        #ax[0].text(0,157,str(info), fontsize = 10) #KD added line
+        ax[1].imshow(hsdata['data'].mean(axis=2))
+        s = hsdata['data'].shape
+        ax[0].imshow(y.reshape(s[0],s[1]))
+        fig.show()
+        pp.savefig(fig) #KD added line
+        print tt
+
+    pp.close()
+
+if __name__ == '__main__':
+    for k in [3]:
+        unsupervised(k)
