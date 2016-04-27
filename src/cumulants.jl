@@ -8,9 +8,8 @@ function cumulant3{T<:AbstractFloat}(data::Matrix{T})
     for i = 1:n
         centred[:,i] = data[:,i]-mean(data[:,i])
     end
-    cumulantT3 = SharedArray(T,n,n,n)
-
-    @sync @parallel for i = 1:n
+    cumulantT3 = zeros(n,n,n)
+    for i = 1:n
         for j = i:n, k = j:n
             a = mean(centred[:,i].*centred[:,j].*centred[:,k])
             cumulantT3[i,j,k] = a
