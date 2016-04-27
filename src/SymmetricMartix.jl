@@ -1,3 +1,5 @@
+Module SymmetricMatrix
+
 squared(m::Array{Any}) = size(m,1) == size(m,2)? true: error("not squared")
 
 
@@ -99,4 +101,5 @@ end
 function gs(n::Int)
     A = randn(n,n)
     return A * A'
+end
 end
