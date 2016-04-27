@@ -33,70 +33,93 @@ function test_index(a, indices)
     end
 end
 
-function read_segments(data::BoxStructure ,i::Int, j::Int)
-    a = data.frame
-    test_index(a, [i,j])
-    si = size(a[1,1],1)
-    s = zeros(si, si)
-    try
-        s = a[i,j]
+
+function read_segments(data::Array,  i::Int, j::Int)
+    test_index(data, [i,j])
+    s = zeros(size(data[1,1]))
+    try 
+        s = data[i,j]
     catch
-        s = a[j,i]'
+        s = data[j,i]'
     end
     return s
 end
 
+
 function into_segments{T <: AbstractFloat}(matrix::Array{T,2}, segment_numb::Int)
     issym(matrix)? true: error("imput matrix not symetric")
     s = size(matrix,1)
-    (s%segment_numb == 0)? true: error("wrong number of segments")
+    (s%segment_numb == 0)? true: error("wrong number of segments")
     blockstruct = cell(segment_numb, segment_numb)
     ofset = Int(s/segment_numb)
     for i = 1:segment_numb, j = i:segment_numb
         blockstruct[i,j] = matrix[1+ofset*(i-1):ofset*i, 1+ofset*(j-1):ofset*j]
     end
-    blockstruct
+    BoxStructure(blockstruct)
+end
+
+function segmentmult(k::Int, l::Int, m1::Array{Any,2}, m2::Array, s1::Int, s2::Int, blocknumber::Int)
+    res = zeros(s1, s2)
+        for i = 1:blocknumber
+            res += read_segments(m1, k,i)*read_segments(m2, i,l)
+        end
+    return res
 end
 
 
 function multiplebs(m1::BoxStructure)
-    blockstruct = cell(m1.sizeframe, m1.sizeframe)
-    for k = 1:m1.sizeframe, l = k:m1.sizeframe
-        res = zeros(m1.sizesegment, m1.sizesegment)
-        for i = 1:m1.sizeframe
-            res += read_segments(m1, k,i)*read_segments(m1, i,l)
-        end
-        blockstruct[k,l] = res
+    s = m1.sizeframe
+    blockstruct = cell(s,s)
+    for k = 1:s, l = k:s
+        blockstruct[k,l] = segmentmult(k,l, m1.frame, m1.frame, m1.sizesegment, m1.sizesegment, s)
     end
     BoxStructure(blockstruct)
 end
 
+
 function multiplebs(m1::BoxStructure, m2::BoxStructure)
-    (m1.sizeframe == m2.sizeframe)? true: error("different number of blocks")
-    (m1.sizesegment == m2.sizesegment)? true: error("different size of blocks")
-    msize = m1.sizeframe*m1.sizesegment
+    s = m1.sizeframe
     ofset = m1.sizesegment
+    (s == m2.sizeframe)? true: error("different number of blocks")
+    (ofset == m2.sizesegment)? true: error("different size of blocks")
+    msize = s*ofset
     matrix = zeros(msize, msize)
-    for k = 1:m1.sizeframe, l = 1:m1.sizeframe
-        res = zeros(m1.sizesegment, m2.sizesegment)
-        for i = 1:m1.sizeframe
-            res += read_segments(m1, k,i)*read_segments(m2, i,l)
-        end
-        matrix[((k-1)*ofset+1):(k*ofset),((l-1)*ofset+1):(l*ofset)] = res
+    for k = 1:s, l = 1:s
+        matrix[((k-1)*ofset+1):(k*ofset),((l-1)*ofset+1):(l*ofset)] = 
+        segmentmult(k,l, m1.frame, m2.frame, ofset, ofset, s)
     end
     matrix
+end
+
+
+function multiplebs(m1::BoxStructure, m2::Array)
+    ofset = m1.sizesegment
+    s1 = m1.sizeframe
+    (s1*ofset == size(m2,1))? true: error("dimentions...")
+    arraysegments = cell(s1)   
+    msize = s1*ofset
+    matrix = zeros(size(m2))
+    for i = 1:s1
+        arraysegments[i] = m2[((i-1)*ofset+1):(i*ofset),:]
+    end
+    for k = 1:s1
+        matrix[((k-1)*ofset+1):(k*ofset),:] = 
+        segmentmult(k,1, m1.frame, arraysegments, ofset, size(m2,2), s1)
+    end
+    return matrix
 end
 
 
 function bstomatrix(m1::BoxStructure)
-    msize = m1.sizeframe*m1.sizesegment
-    matrix = zeros(msize,msize)
     ofset = m1.sizesegment
+    msize = m1.sizeframe*ofset
+    matrix = zeros(msize,msize)
     for i = 1:m1.sizeframe, j = 1:m1.sizeframe
-        matrix[((i-1)*ofset+1):(i*ofset),((j-1)*ofset+1):(j*ofset)] = read_segments(m1,i,j)
+        matrix[((i-1)*ofset+1):(i*ofset),((j-1)*ofset+1):(j*ofset)] = read_segments(m1.frame,i,j)
     end
     matrix
 end
+
 
 function gs(n::Int)
     A = randn(n,n)
