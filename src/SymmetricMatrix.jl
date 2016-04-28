@@ -1,4 +1,4 @@
-
+module SymmetricMatrix
 
   squared(m::Array{Any}) = size(m,1) == size(m,2)? true: error("not squared")
 
@@ -157,8 +157,11 @@
   fnorm(m1::BoxStructure) = sqrt(tracebs(multiplebs(m1)))
 
 
-  function gs(n::Int)
+  function generatesmat(n::Int)
       A = randn(n,n)
       return A * A'
   end
-
+  
+  
+export into_segments, multiplebs, bstomatrix, add, vectorisebs, tracebs, fnorm, generatesmat
+end
