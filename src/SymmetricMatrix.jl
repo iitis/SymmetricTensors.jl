@@ -161,7 +161,18 @@ module SymmetricMatrix
       A = randn(n,n)
       return A * A'
   end
+
   
+function covariancebs(datatab::Array{Float64, 2}, blocksize::Int)
+    d = size(datatab, 2)
+    (d%blocksize == 0)? true: error("wrong number of blocks")
+    segmumber = Int(d/blocksize)   
+    cmatrix = cell(segmumber,segmumber) 
+    for b1 = 1:segmumber, b2 = b1:segmumber
+        cmatrix[b1,b2] = cov(datatab[:,blocksize*(b1-1)+1:blocksize*b1], datatab[:,blocksize*(b2-1)+1:blocksize*b2], corrected = false)
+    end
+    BoxStructure(cmatrix)
+end  
   
-export into_segments, multiplebs, bstomatrix, add, vectorisebs, tracebs, fnorm, generatesmat
+export into_segments, multiplebs, bstomatrix, add, vectorisebs, tracebs, fnorm, generatesmat, covariancebs
 end
