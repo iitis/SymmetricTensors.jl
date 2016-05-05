@@ -120,20 +120,20 @@ module SymmetricMatrix
       matrix
   end
 
-  function add(m1::BoxStructure, m2::BoxStructure)
-      s = m1.sizeframe
-      (s == m2.sizeframe)? true: error("different numbers of blocks")
-      (m1.sizesegment == m2.sizesegment)? true: error("different size of blocks")
-      res = m1.frame
-      for i = 1:s, j = 1:s
-	  try
-	      res[i,j]+=m2.frame[i,j]
-	  catch
-	      true
-	  end
-      end
-      BoxStructure(res) 
-  end
+function add(m1::BoxStructure, m2::BoxStructure)
+    s = m1.sizeframe
+    (s == m2.sizeframe)? true: error("different numbers of blocks")
+    (m1.sizesegment == m2.sizesegment)? true: error("different size of blocks")
+    res = cell(s,s)
+    for i = 1:s, j = 1:s
+        try
+            res[i,j] = m1.frame[i,j]+m2.frame[i,j]
+        catch
+            ()
+        end
+    end
+    BoxStructure(res) 
+end
       
   function vectorisebs(m1::BoxStructure)
       T = eltype(m1.frame[1,1])
@@ -141,7 +141,7 @@ module SymmetricMatrix
       s = m1.sizeframe
       v = T[]
       for k = 1:s, j = 1:ofset, i = 1:s
-	  v = (vcat(v, read_segments(b.frame ,i, k)[:,j]))
+	  v = (vcat(v, read_segments(m1.frame ,i, k)[:,j]))
       end
       v  
   end
@@ -174,5 +174,5 @@ function covariancebs(datatab::Array{Float64, 2}, blocksize::Int)
     BoxStructure(cmatrix)
 end  
   
-export into_segments, multiplebs, bstomatrix, add, vectorisebs, tracebs, fnorm, generatesmat, covariancebs
+export into_segments, multiplebs, bstomatrix, vectorisebs, tracebs, fnorm, generatesmat, covariancebs, add
 end
