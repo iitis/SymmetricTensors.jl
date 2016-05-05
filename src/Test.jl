@@ -40,9 +40,9 @@ testdop
     end
 
 
-    function dataoperatortest(testdop::Function, comparedop::Function, desegmentingf::Function, segsize::Int = 4, segn::Int = 4, l::Int = 100)
+    function dataoperatortest(testdop::Function, desegmentingf::Function, segsize::Int = 4, segn::Int = 4, l::Int = 100)
       data = randn(l, segsize*segn)
-      @test_approx_eq(desegmentingf(testdop(data, segn)), comparedop(data, corrected = false)) #o tym pomyslec
+      @test_approx_eq(desegmentingf(testdop(data, segn)), cov(data, corrected = false)) #o tym pomyslec
     end
     
     
