@@ -176,3 +176,122 @@ end
   
 export into_segments, multiplebs, bstomatrix, vectorisebs, tracebs, fnorm, generatesmat, covariancebs, add
 end
+
+
+# w formie nullable ten kod dziala
+
+
+using NullableArrays
+
+function segmentise{T <: AbstractFloat}(data::Matrix{T}, segments::Int)
+    issym(Array{Float32}(data)) ? (): throw("SymmetryError")
+    datasize = size(data,1)
+    (datasize%segments == 0)? () : throw("SegmentNumberError")
+    frame = NullableArray(Matrix{T}, segments, segments)
+    segmentsize = div(datasize, segments)
+    for i = 1:segments, j = i:segments
+        frame[i,j] = data[1+segmentsize*(i-1):segmentsize*i, 1+segmentsize*(j-1):segmentsize*j]
+    end
+    frame
+end
+
+function structfeatures{T <: AbstractFloat}(frame::NullableArrays.NullableArray{Matrix{T},2})
+    sf = size(frame, 1)
+    sf == size(frame, 2)? (): throw("FrameNotSquared")
+    for i = 1:sf, j = 1:sf
+        if i > j
+            isnull(frame[i,j])? (): throw("UnderDiagonalNotNull")
+        else    
+            size(frame[i,j].value, 1) == size(frame[i,j].value, 2)? (): throw("BlocksNotSquared")
+        end          
+        issym(Array{Float32}(frame[i,i].value))? (): throw("DiagBlocksNotSymmetric")
+    end
+end
+
+immutable BoxStructure{T <: AbstractFloat} 
+    frame::NullableArrays.NullableArray{Matrix{T},2}
+    sizesegment::Int
+    function call{T}(::Type{BoxStructure}, frame::NullableArrays.NullableArray{Matrix{T},2})
+        structfeatures(frame)
+        new{T}(frame, size(frame[1,1].value,1))
+    end
+end
+
+convert{T <: AbstractFloat}(::Type{BoxStructure}, data::Matrix{T}, segments::Int = 2) =
+BoxStructure(segmentise(data, segments))
+
+readsegments{T <: AbstractFloat}(data::BoxStructure{T},  i::Int, j::Int) =
+isnull(data.frame[i,j])? transpose(data.frame[j,i].value): data.frame[i,j].value
+
+function matricise(m1::BoxStructure)
+    ofset = m1.sizesegment
+    framesize = size(m1.frame, 1)
+    msize = framesize*ofset
+    matrix = zeros(msize,msize)
+    for i = 1:framesize, j = 1:framesize
+        matrix[((i-1)*ofset+1):(i*ofset),((j-1)*ofset+1):(j*ofset)] = readsegments(m1,i,j)
+    end
+    matrix
+end
+
+
+function trace(m1::BoxStructure)
+    tr = 0
+    for i = 1:size(m1.frame, 1)
+        tr += Base.trace(m1.frame[i,i].value)
+    end
+      tr
+end
+
+
+function vec(m1::BoxStructure)
+    T = eltype(m1.frame[1,1])
+    ofset = m1.sizesegment
+    s = size(m1.frame, 1)
+    v = T[]
+    for k = 1:s, j = 1:ofset, i = 1:s
+        v = (vcat(v, readsegments(m1 ,i, k)[:,j]))
+    end
+      v  
+end
+
+function segmentmult(k::Int, l::Int, m1::BoxStructure, m2::BoxStructure, s1::Int, s2::Int, blocknumber::Int)
+      res = zeros(s1, s2)
+	  for i = 1:blocknumber
+	      res += readsegments(m1, k,i)*readsegments(m2, i,l)
+	  end
+    return res
+end
+
+function multiple(m1::BoxStructure, m2::BoxStructure)
+    s = size(m1.frame, 1)
+    ofset = m1.sizesegment
+    (s == size(m1.frame, 2))? () : throw("different numbers of blocks")
+    (ofset == m2.sizesegment)? () : throw("different size of blocks")
+    msize = s*ofset
+    matrix = zeros(msize, msize)
+    for k = 1:s, l = 1:s
+        matrix[((k-1)*ofset+1):(k*ofset),((l-1)*ofset+1):(l*ofset)] = 
+        segmentmult(k,l, m1, m2, ofset, ofset, s)
+    end
+      matrix
+end
+
+multiple(m1::BoxStructure) = multiple(m1::BoxStructure, m1::BoxStructure)
+
+vecnorm(m1::BoxStructure) = sqrt(Base.trace(multiple(m1)))
+
+function add{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T})
+    s = size(m1.frame, 1)
+    (s == size(m1.frame, 2))? (): throw("different numbers of blocks")
+    (m1.sizesegment == m2.sizesegment)? (): throw("different size of blocks")
+    res = NullableArray(Matrix{T}, s, s)
+    for i = 1:s, j = 1:s
+        if !isnull(m1.frame[i,j])
+            res[i,j] = m1.frame[i,j].value+m2.frame[i,j].value
+        end
+    end
+    BoxStructure(res) 
+end
+
+
