@@ -1,49 +1,32 @@
 module Test
   using Base.Test
   using NullableArrays
+  using SymmetricMatrix
+  importall SymmetricMatrix
 
 
-  function generatesym(n::Int)
-      A = randn(n,n)
-      return A * A'
+  function runtests()
+    n = 20
+    l = 1000
+    segments = 5
+
+    testmatrix = randn(n,n)
+    sm = testmatrix*transpose(testmatrix);
+    smseg = convert(BoxStructure{Float64}, sm, segments);
+    data = randn(l,n);
+
+
+    @test_approx_eq(matricise(smseg), sm)
+    @test_approx_eq(smseg*smseg, sm*sm)
+    @test_approx_eq(matricise(smseg+smseg), sm+sm)
+    @test_approx_eq(smseg*testmatrix, sm*testmatrix)
+    @test_approx_eq(vec(smseg), vec(sm))
+    @test_approx_eq(trace(smseg), trace(sm))
+    @test_approx_eq(vecnorm(smseg), vecnorm(sm))
+    @test_approx_eq(matricise(square(smseg)), sm*sm)
+    @test_approx_eq(matricise(covbs(data, segments, false)), cov(data, corrected=false))
+    @test_approx_eq(matricise(covbs(data, segments, true)), cov(data, corrected=true))
   end
-
-    function operationtesting(testoperator::Function, compareoperator::Function, segmentingf::Function, numbervar::Int = 2
-    , numbsegmentedvar::Int = 2, segsize::Int = 10, segn::Int = 10)
-      variable = cell(numbervar)
-      segmentedvar = cell(numbervar)
-      for i = 1:numbervar
-	if i <= numbsegmentedvar
-	  variable[i] = generatesym(segsize*segn) 
-	  segmentedvar[i] = segmentingf(variable[i], segn)
-	else
-	  segmentedvar[i] = variable[i] = randn(segsize*segn, segsize*segn)
-	end
-      end
-      @test_approx_eq(testoperator(segmentedvar...), compareoperator(variable...))
-    end
-    
-   function operationtesting(testoperator::Function, compareoperator::Function, segmentingf::Function, desegmentingf::Function, numbervar::Int = 2
-    , numbsegmentedvar::Int = 2, segsize::Int = 10, segn::Int = 10)
-      variable = cell(numbervar)
-      segmentedvar = cell(numbervar)
-      for i = 1:numbervar
-	if i <= numbsegmentedvar
-	  variable[i] = generatesym(segsize*segn) 
-	  segmentedvar[i] = segmentingf(variable[i], segn)
-	else
-	  segmentedvar[i] = variable[i] = randn(segsize*segn, segsize*segn)
-	end
-      end
-      println(typeof(desegmentingf(testoperator(segmentedvar...))), typeof(compareoperator(variable...)))
-      @test_approx_eq(desegmentingf(testoperator(segmentedvar...)), compareoperator(variable...))
-    end
-
-
-    function dataoperatortest(testdop::Function, desegmentingf::Function, segsize::Int = 4, segn::Int = 4, l::Int = 100)
-      data = randn(l, segsize*segn)
-      @test_approx_eq(desegmentingf(testdop(data, segn)), cov(data, corrected = false)) #o tym pomyslec
-    end
     
     
     function nonsquaredframe(s1::Int, s2::Int, n::Int)
@@ -87,5 +70,5 @@ function notsymdiagblocks(s1::Int, n::Int)
     @test_throws(struct(X))
   end
     
-  export operationtesting, dataoperatortest, teststructure, nonsquaredframe, nonullframe, notsymdiagblocks
+  export runtests, nonsquaredframe, nonullframe, notsymdiagblocks
 end
