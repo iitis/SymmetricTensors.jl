@@ -5,6 +5,7 @@ module Test
   importall SymmetricMatrix
   
   function generatedata(n::Int = 20, segments::Int = 5, l::Int = 1000)
+      srand(1234)
       randmatrix = randn(n,n)
       boolean = bitrand(n,n)
       complex = im*randn(n,n)+randn(n,n)
@@ -40,6 +41,7 @@ module Test
     @test_approx_eq(vecnorm(smseg), vecnorm(sm))
     @test_approx_eq(matricise(square(smseg)), sm*sm)
     @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), false)), cov(data, corrected=false))
+    @test_approx_eq(matricise(covbs(Matrix{Float32}(data), size(smseg.frame,1), false)), cov(Matrix{Float32}(data), corrected=false))
     @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), true)), cov(data, corrected=true))
     
     @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m, 5))
