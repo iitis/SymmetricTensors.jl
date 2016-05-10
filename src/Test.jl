@@ -3,72 +3,62 @@ module Test
   using NullableArrays
   using SymmetricMatrix
   importall SymmetricMatrix
-
-
+  
+  function generatedata(n::Int = 20, segments::Int = 5, l::Int = 1000)
+      randmatrix = randn(n,n)
+      symmatrix = randmatrix*transpose(randmatrix)
+      randmatrix, symmatrix, convert(BoxStructure{Float64}, symmatrix, segments), randn(l,n)
+   end
+   
+   function createsegments(randmatrix, nonullel::Bool = false, s1::Int = 4)
+      structure = NullableArray(Matrix{Float64}, s1, s1)
+      for i = 1:s1, j = i:s1
+	  structure[i,j] = randmatrix
+      end
+      if nonullel
+	structure[2,1] = randmatrix
+      end
+      structure
+  end
+    
+  
   function runtests()
-    n = 20
-    l = 1000
-    segments = 5
+    
+    m, sm, smseg, data = generatedata()
 
-    testmatrix = randn(n,n)
-    sm = testmatrix*transpose(testmatrix);
-    smseg = convert(BoxStructure{Float64}, sm, segments);
-    data = randn(l,n);
-
+    smseg1 = convert(BoxStructure{Float64}, sm, 2)
 
     @test_approx_eq(matricise(smseg), sm)
     @test_approx_eq(smseg*smseg, sm*sm)
     @test_approx_eq(matricise(smseg+smseg), sm+sm)
-    @test_approx_eq(smseg*testmatrix, sm*testmatrix)
+    @test_approx_eq(smseg*m, sm*m)
+    @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
     @test_approx_eq(vec(smseg), vec(sm))
     @test_approx_eq(trace(smseg), trace(sm))
     @test_approx_eq(vecnorm(smseg), vecnorm(sm))
     @test_approx_eq(matricise(square(smseg)), sm*sm)
-    @test_approx_eq(matricise(covbs(data, segments, false)), cov(data, corrected=false))
-    @test_approx_eq(matricise(covbs(data, segments, true)), cov(data, corrected=true))
+    @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), false)), cov(data, corrected=false))
+    @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), true)), cov(data, corrected=true))
+    
+
+    
+    @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m, 5))
+    @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, sm[:,1:15], 5))
+    @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m, 7))
+    @test_throws(DimensionMismatch, BoxStructure(smseg.frame[:,1:2]))
+    @test_throws(DimensionMismatch, BoxStructure(createsegments(sm[:,1:2])))
+    @test_throws(DimensionMismatch, BoxStructure(createsegments(m)))
+    @test_throws(ArgumentError, BoxStructure(createsegments(sm, true)))
+    @test_throws(DimensionMismatch, smseg*smseg1)
+    @test_throws(DimensionMismatch, smseg+smseg1)
+    @test_throws(DimensionMismatch, smseg*(m[1:5,:]))
+    @test_throws(DimensionMismatch, smseg*(m[:,1:7]))
+    @test_throws(DimensionMismatch, covbs(data, 7))
   end
     
     
-    function nonsquaredframe(s1::Int, s2::Int, n::Int)
-      frame = NullableArray(Matrix{Float64}, s1, s2)
-      A = randn(n,n)
-      X = A*transpose(A);
-      for i = 1:s1, j = i:s2
-	      frame[i,j] = X
-      end
-      frame
-  end
-
-
-function nonullframe(s1::Int, n::Int)
-      frame = NullableArray(Matrix{Float64}, s1, s1)
-      A = randn(n,n)
-      X = A*transpose(A);
-      for i = 1:s1, j = 1:s1
-	      frame[i,j] = X
-      end
-      frame
-  end
-
-function notsymdiagblocks(s1::Int, n::Int)
-      frame = NullableArray(Matrix{Float64}, s1, s1)
-      X = randn(n,n)
-      for i = 1:s1, j = i:s1
-	      frame[i,j] = X
-      end
-      frame
-  end
+  m, sm, smseg, data = generatedata()
   
-  function teststructure(struct, case::Int = 1)  
-    if case == 1 
-      X = nonsquaredframe(3,4,5)
-    elseif case == 2
-      X = nonullframe(3,4)
-    elseif case == 3
-      X = notsymdiagblocks(3,4)
-    end
-    @test_throws(struct(X))
-  end
     
-  export runtests, nonsquaredframe, nonullframe, notsymdiagblocks
+  export runtests
 end
