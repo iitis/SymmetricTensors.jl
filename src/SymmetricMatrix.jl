@@ -1,12 +1,12 @@
 module SymmetricMatrix
 using NullableArrays
-import Base.trace, Base.vec, Base.vecnorm
+import Base: trace, vec, vecnorm, +, *
 
 indexes(i, ofset) = ((i-1)*ofset+1):(i*ofset)
 
 function segmentise{T <: AbstractFloat}(data::Matrix{T}, segments::Int)
-    issym(Array{Float32}(data)) ? (): throw(DimensionMismatch("matrix is not symmetric")) #poprawic
-    (size(data,1)%segments == 0)? () : throw(DimensionMismatch("data size $(size(data,1)) / segment size $segments not integer"))
+    issym(Array{Float32}(data)) || throw(DimensionMismatch("matrix is not symmetric")) #poprawic
+    (size(data,1)%segments == 0) || throw(DimensionMismatch("data size $(size(data,1)) / segment size $segments not integer"))
     frame = NullableArray(Matrix{T}, segments, segments)
     ofset = div(size(data,1), segments)
     for i = 1:segments, j = i:segments
@@ -17,14 +17,14 @@ end
 
 function structfeatures{T <: AbstractFloat}(frame::NullableArrays.NullableArray{Matrix{T},2})
     sf = size(frame, 1)
-    sf == size(frame, 2)? (): throw(DimensionMismatch("frame not symmetric"))
+    sf == size(frame, 2) || throw(DimensionMismatch("frame not symmetric"))
     for i = 1:sf, j = 1:sf
         if i > j
-            isnull(frame[i,j])? (): throw(ArgumentError("underdiagonal block [ $i , $j ] not null"))
+            isnull(frame[i,j]) || throw(ArgumentError("underdiagonal block [ $i , $j ] not null"))
         else    
-            size(frame[i,j].value, 1) == size(frame[i,j].value, 2)? (): throw(DimensionMismatch("[ $i , $j ] block not squared"))
+            size(frame[i,j].value, 1) == size(frame[i,j].value, 2) || throw(DimensionMismatch("[ $i , $j ] block not squared"))
         end          
-        issym(Array{Float32}(frame[i,i].value))? (): throw(DimensionMismatch("diagonal blocks not symmetric")) #poprawic
+        issym(Array{Float32}(frame[i,i].value)) || throw(DimensionMismatch("diagonal blocks not symmetric")) #poprawic
     end
 end
 
@@ -57,7 +57,6 @@ function makematrix(T::Type, ofset::Int, s::Int)
     msize, zeros(T, msize,msize)
 end
 
-
 function matricise{T <: AbstractFloat}(m1::BoxStructure{T})
     ofset, s = getdims(m1)
     msize, matrix = makematrix(T, ofset, s)
@@ -86,7 +85,7 @@ end
 
 function *{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T})
     ofset, s = getdims(m1)
-    (getdims(m1) == getdims(m2))? () : throw(DimensionMismatch("dims of B1 $(getdims(m1)) must equal to dims of B2 $(getdims(m2))"))
+    getdims(m1) == getdims(m2) || throw(DimensionMismatch("dims of B1 $(getdims(m1)) must equal to dims of B2 $(getdims(m2))"))
     msize, matrix = makematrix(T, ofset, s)
     for k = 1:s, l = 1:s
         matrix[indexes(k, ofset),indexes(l, ofset)] = segmentmult(k,l, m1, m2, ofset, ofset, s)
@@ -97,8 +96,8 @@ end
 function *{T <: AbstractFloat}(m1::BoxStructure{T}, m2::Matrix{T})
       ofset, s1 = getdims(m1)
       msize, matrix = makematrix(T, ofset, s1)
-      (msize == size(m2,1))? (): throw(DimensionMismatch("size of B1 $(msize) must equal to size of A $(size(m2,1))"))
-      (size(m2,2)%ofset == 0)? () : throw(DimensionMismatch(" matrix size $(size(m2,2)) / segment size $ofset not integer"))
+      msize == size(m2,1) || throw(DimensionMismatch("size of B1 $(msize) must equal to size of A $(size(m2,1))"))
+      size(m2,2)%ofset == 0 || throw(DimensionMismatch(" matrix size $(size(m2,2)) / segment size $ofset not integer"))
       s2 = div(size(m2,2),ofset)
       arraysegments = cell(s2)
       matrix = matrix[:, 1:size(m2,2)]
@@ -128,7 +127,7 @@ vecnorm{T <: AbstractFloat}(m1::BoxStructure{T}) = sqrt(trace(square(m1)))
 
 function +{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T})
     s = size(m1.frame, 1)
-    (getdims(m1) == getdims(m2))? () : throw(DimensionMismatch("dims of B1 $(getdims(m1)) must equal to dims of B2 $(getdims(m2))"))
+    getdims(m1) == getdims(m2) || throw(DimensionMismatch("dims of B1 $(getdims(m1)) must equal to dims of B2 $(getdims(m2))"))
     res = NullableArray(Matrix{T}, s, s)
     for i = 1:s, j = 1:s
         if !isnull(m1.frame[i,j])
@@ -139,7 +138,7 @@ function +{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T})
 end
 
 function covbs{T <: AbstractFloat}(datatab::Matrix{T}, blocksize::Int = 2, corrected::Bool = false)
-    (size(datatab, 2)%blocksize == 0)? (): throw(DimensionMismatch("data size $(size(datatab, 2)) / segment size $blocksize not integer"))
+    size(datatab, 2)%blocksize == 0 || throw(DimensionMismatch("data size $(size(datatab, 2)) / segment size $blocksize not integer"))
     s = div(size(datatab, 2), blocksize)   
     cmatrix = NullableArray(Matrix{T}, s, s)
     for b1 = 1:s, b2 = b1:s
