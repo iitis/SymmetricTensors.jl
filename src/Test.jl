@@ -4,13 +4,12 @@ module Test
   using SymmetricMatrix
   importall SymmetricMatrix
   
-  function generatedata(n::Int = 20, segments::Int = 5, l::Int = 1000)
-      srand(1234)
-      randmatrix = randn(n,n)
-      boolean = bitrand(n,n)
-      complex = im*randn(n,n)+randn(n,n)
-      symmatrix = randmatrix*transpose(randmatrix)
-      randmatrix, symmatrix, convert(BoxStructure{Float64}, symmatrix, segments), randn(l,n), boolean, complex*complex'
+  symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
+  
+  function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 5, l::Int = 1000)
+      srand(seed)
+      rmat = randn(n,n)
+      rmat, symmetrise(rmat), convert(BoxStructure{Float64}, symmetrise(rmat), seg), randn(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
    end
    
    function createsegments(randmatrix, nonullel::Bool = false, s1::Int = 4)
@@ -26,14 +25,15 @@ module Test
     
     m, sm, smseg, data, boolean, comlx = generatedata()
     smseg1 = convert(BoxStructure{Float64}, sm, 2)
+    m2, sm2, smseg2 = generatedata(1233)
 
     @test_approx_eq(matricise(smseg), sm)
     @test_approx_eq(matricise(convert(BoxStructure{Float16}, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
     @test_approx_eq(matricise(convert(BoxStructure{Float32}, Matrix{Float32}(sm), 5)), Matrix{Float32}(sm))
     @test_approx_eq(matricise(convert(BoxStructure{AbstractFloat}, Matrix{AbstractFloat}(sm), 5)), Matrix{AbstractFloat}(sm))
     
-    @test_approx_eq(smseg*smseg, sm*sm)
-    @test_approx_eq(matricise(smseg+smseg), sm+sm)
+    @test_approx_eq(smseg*smseg2, sm*sm2)
+    @test_approx_eq(matricise(smseg+smseg2), sm+sm2)
     @test_approx_eq(smseg*m, sm*m)
     @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
     @test_approx_eq(vec(smseg), vec(sm))
