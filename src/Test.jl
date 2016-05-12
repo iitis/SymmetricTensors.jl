@@ -34,7 +34,14 @@ module Test
     
     @test_approx_eq(smseg*smseg2, sm*sm2)
     @test_approx_eq(matricise(smseg+smseg2), sm+sm2)
+    @test_approx_eq(matricise(smseg.*smseg2), sm.*sm2)
     @test_approx_eq(smseg*m, sm*m)
+    
+    @test_approx_eq(matricise(smseg*2.1), sm*2.1)
+    @test_approx_eq(matricise(smseg*2), sm*2)
+    @test_approx_eq(matricise(smseg+2.1), sm+2.1)
+    @test_approx_eq(matricise(smseg+2), sm+2)
+
     @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
     @test_approx_eq(vec(smseg), vec(sm))
     @test_approx_eq(trace(smseg), trace(sm))
@@ -59,6 +66,7 @@ module Test
     @test_throws(ArgumentError, BoxStructure(createsegments(sm, true)))
     @test_throws(DimensionMismatch, smseg*smseg1)
     @test_throws(DimensionMismatch, smseg+smseg1)
+    @test_throws(DimensionMismatch, smseg.*smseg1)
     @test_throws(DimensionMismatch, smseg*(m[1:5,:]))
     @test_throws(DimensionMismatch, smseg*(m[:,1:7]))
     @test_throws(DimensionMismatch, covbs(data, 7))
