@@ -39,23 +39,8 @@ end
 convert{T <: AbstractFloat}(::Type{BoxStructure{T}}, data::Matrix{T}, segments::Int = 2) = BoxStructure(segmentise(data, segments))
 readsegments{T <: AbstractFloat}(i::Int, j::Int, data::BoxStructure{T}) = isnull(data.frame[i,j])? transpose(data.frame[j,i].value): data.frame[i,j].value
 size{T <: AbstractFloat}(m1::BoxStructure{T}) = m1.sizesegment, size(m1.frame, 1), m1.sizesegment*size(m1.frame, 1)
+segmentmult{T <: AbstractFloat}(k::Int, l::Int, m1::BoxStructure{T}...) = mapreduce(i -> readsegments(k,i, m1[1])*readsegments(i,l, m1[size(m1,1)]), +, collect(1:size(m1[1])[2]))
 
-
-function segmentmult{T <: AbstractFloat}(k::Int, l::Int, m1::BoxStructure{T}, m2::BoxStructure{T})
-     ret = zeros(T, size(m1)[1], size(m1)[1])
-     for i = 1:size(m1)[2]
-	ret += readsegments(k,i, m1)*readsegments(i,l, m2)
-     end
-     ret
-end
-
-function segmentmult{T <: AbstractFloat}(k::Int, l::Int, m1::BoxStructure{T})
-     ret = zeros(T, size(m1)[1], size(m1)[1])
-     for i = 1:size(m1)[2]
-	ret += readsegments(k,i, m1)*readsegments(i,l, m1)
-     end
-     ret
-end
 
 function testsize{T <: AbstractFloat}(m1::BoxStructure{T}...)
     for i = 2:size(m1,1)
@@ -72,6 +57,7 @@ function bsoperation{T <: AbstractFloat}(bsfunction::Function, m1::BoxStructure{
     ret
 end
 
+
 function oponbs{T <: AbstractFloat}(f::Function, m1::BoxStructure{T}...)
     ret = NullableArray(Matrix{T}, size(m1[1].frame))
       for k = 1:size(m1[1])[2], l = k:size(m1[1])[2]
@@ -82,8 +68,7 @@ end
 
 function blockop{T <: AbstractFloat, S <: Real}(n::S, f::Function, m1::BoxStructure{T}...)
     testsize(m1...)
-    g(i, j, m1...) = f(n, map(k -> m1[k].frame[i,j].value,collect(1:size(m1,1)))...)
-    oponbs(g ,m1...)
+    oponbs((i, j, m1...) -> f(n, map(k -> m1[k].frame[i,j].value,collect(1:size(m1,1)))...) ,m1...)
 end
 
 matricise{T <: AbstractFloat}(m1::BoxStructure{T}) = bsoperation(readsegments, m1)
@@ -94,14 +79,8 @@ matricise{T <: AbstractFloat}(m1::BoxStructure{T}) = bsoperation(readsegments, m
 +{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T}) = blockop(0, +, m1, m2)
 .*{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T}) = blockop(1, (a::Int,b::Matrix{T},c::Matrix{T}) -> b.*c, m1, m2)
 square{T <: AbstractFloat}(m1::BoxStructure{T}) = oponbs(segmentmult, m1)
-
-function trace{T <: AbstractFloat}(m1::BoxStructure{T})
-    ret = T(0)
-    for i = 1:size(m1)[2]
-        ret += trace(m1.frame[i,i].value)
-    end
-    ret
-end
+trace{T <: AbstractFloat}(m1::BoxStructure{T}) = mapreduce(i -> trace(m1.frame[i,i].value), +, collect(1:size(m1)[2]))
+vecnorm{T <: AbstractFloat}(m1::BoxStructure{T}) = sqrt(trace(square(m1)))
 
 function vec{T <: AbstractFloat}(m1::BoxStructure{T})
     ret = T[]
@@ -111,33 +90,20 @@ function vec{T <: AbstractFloat}(m1::BoxStructure{T})
     ret  
 end
 
-function mattoslises{T <: AbstractFloat}(m2::Matrix{T}, slisesize::Int)
-     ret = cell(div(size(m2,2),slisesize))
-     for i = 1:div(size(m2,2),slisesize)
-        ret[i] = m2[:,seg(i, slisesize)]
-     end
-     ret
-end
-
+mattoslises{T <: AbstractFloat}(m2::Matrix{T}, slisesize::Int) = map(i -> m2[:,seg(i, slisesize)], collect(1:div(size(m2,2),slisesize)))
 
 function *{T <: AbstractFloat}(m1::BoxStructure{T}, m2::Matrix{T})
-      ret = zeros(T, size(m1)[3], size(m2,2))
       size(m1)[3] == size(m2,1) || throw(DimensionMismatch("size of B1 $(size(m1)[3]) must equal to size of A $(size(m2,1))"))
       size(m2,2)%size(m1)[1] == 0 || throw(DimensionMismatch(" matrix size $(size(m2,2)) / segment size $(size(m1)[1]) not integer"))
       m2slises = mattoslises(m2, size(m1)[1])
+      ret = zeros(T, size(m1)[3], size(m2,2))
       for k1 = 1:size(m1)[2], k = 1:size(m2slises,1)
-        temporary = zeros(size(m1)[1], size(m1)[1])
-        for j = 1:size(m1)[2]
-            temporary += readsegments(k1,j, m1)*m2slises[k][seg(j, size(m1)[1]),:]
-        end
-        ret[seg(k1, size(m1)[1]),seg(k, size(m1)[1])] = temporary
+        ret[seg(k1, size(m1)[1]),seg(k, size(m1)[1])] = mapreduce(j -> readsegments(k1,j, m1)*m2slises[k][seg(j, size(m1)[1]),:], +, collect(1:size(m1)[2]))
       end
       ret
   end
 
-vecnorm{T <: AbstractFloat}(m1::BoxStructure{T}) = sqrt(trace(square(m1)))
-
-
+ 
 function covbs{T <: AbstractFloat}(datatab::Matrix{T}, blocksize::Int = 2, corrected::Bool = false)
     size(datatab, 2)%blocksize == 0 || throw(DimensionMismatch("data size $(size(datatab, 2)) / segment size $blocksize not integer"))
     s = div(size(datatab, 2), blocksize)   
