@@ -6,7 +6,7 @@ module Test
   
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
   
-  function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 5, l::Int = 1000)
+  function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 6, l::Int = 1000)
       srand(seed)
       rmat = randn(n,n)
       rmat, symmetrise(rmat), convert(BoxStructure{Float64}, symmetrise(rmat), seg), randn(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
@@ -26,6 +26,7 @@ module Test
     m, sm, smseg, data, boolean, comlx = generatedata()
     smseg1 = convert(BoxStructure{Float64}, sm, 2)
     m2, sm2, smseg2 = generatedata(1233)
+    badsegments = 7
 
     @test_approx_eq(matricise(smseg), sm)
     @test_approx_eq(matricise(convert(BoxStructure{Float16}, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
@@ -43,17 +44,19 @@ module Test
     @test_approx_eq(matricise(smseg+2), sm+2)
 
     @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
+    @test_approx_eq(smseg*m[:,1:7], sm*m[:,1:7])
+    @test_approx_eq(smseg*m[:,1:1], sm*m[:,1:1])
     @test_approx_eq(vec(smseg), vec(sm))
     @test_approx_eq(trace(smseg), trace(sm))
     @test_approx_eq(vecnorm(smseg), vecnorm(sm))
     @test_approx_eq(matricise(square(smseg)), sm*sm)
-    @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), false)), cov(data, corrected=false))
-    @test_approx_eq(matricise(covbs(Matrix{Float32}(data), size(smseg.frame,1), false)), cov(Matrix{Float32}(data), corrected=false))
-    @test_approx_eq(matricise(covbs(data, size(smseg.frame,1), true)), cov(data, corrected=true))
+    @test_approx_eq(matricise(covbs(data, smseg.sizesegment, false)), cov(data, corrected=false))
+    @test_approx_eq(matricise(covbs(Matrix{Float32}(data), smseg.sizesegment, false)), cov(Matrix{Float32}(data), corrected=false))
+    @test_approx_eq(matricise(covbs(data, smseg.sizesegment, true)), cov(data, corrected=true))
     
     @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m, 5))
     @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, sm[:,1:15], 5))
-    @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m, 7))
+    @test_throws(DimensionMismatch, convert(BoxStructure{Float64}, m,  badsegments))
     @test_throws(MethodError, convert(BoxStructure{Float64}, boolean, 5))
     @test_throws(TypeError, convert(BoxStructure{Bool}, boolean, 5))
     @test_throws(MethodError, convert(BoxStructure{Float64}, comlx, 5))
@@ -68,8 +71,7 @@ module Test
     @test_throws(DimensionMismatch, smseg+smseg1)
     @test_throws(DimensionMismatch, smseg.*smseg1)
     @test_throws(DimensionMismatch, smseg*(m[1:5,:]))
-    @test_throws(DimensionMismatch, smseg*(m[:,1:7]))
-    @test_throws(DimensionMismatch, covbs(data, 7))
+    @test_throws(DimensionMismatch, covbs(data,  badsegments))
   
     
 end
