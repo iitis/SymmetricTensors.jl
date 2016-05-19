@@ -20,13 +20,14 @@ end
 
 function issymetric{T <: AbstractFloat}(data::Array{T})
     for i = 2:ndims(data)
-        (maximum(abs(unfold(data, 1)-unfold(data, i))) < 1e-7) || throw(DimensionMismatch("matrix is not symmetric"))
+        (maximum(abs(unfold(data, 1)-unfold(data, i))) < 1e-7) || throw(DimensionMismatch("array is not symmetric"))
     end
 end
-
 function segsizetest{T <: AbstractFloat}(data::Array{T}, segments::Int)
     ((size(data,1)%segments) <= (size(data,1)÷segments)) || throw(DimensionMismatch("last segment len $(size(data,1)-segments*(size(data,1)÷segments)) > segment len $(size(data,1)÷segments)"))
 end
+
+issquared{T <: AbstractFloat, S}(ar::(Union{NullableArrays.NullableArray{Array{T,S},S}, Array{T,S}})) = (maximum(size(ar)) == minimum(size(ar)) )
 
 function segmentise{T <: AbstractFloat}(data::Array{T}, segments::Int)
     issymetric(data)
@@ -35,18 +36,18 @@ function segmentise{T <: AbstractFloat}(data::Array{T}, segments::Int)
     creatnarray(data, (data::Array{T}, i::Int...) -> data[map(k::Int -> seg(k, step...), i)...], segments)
 end
 
-
-function structfeatures(frame)
-    maximum(size(frame)) == minimum(size(frame)) || throw(DimensionMismatch("frame not symmetric")) #porownanie wielu
-     for i in product(fill(1:size(frame, 1), ndims(frame))...)
+function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
+     dims = ndims(frame)
+     issquared(frame) || throw(DimensionMismatch("frame not squared"))
+     for i in product(fill(1:size(frame, 1), dims)...)
 	if !issorted(i)
 	  isnull(frame[i...]) || throw(ArgumentError("underdiagonal block [$i ] not null"))
 	elseif maximum(i) < size(frame, 1)
-	  maximum(size(frame[i...].value)) == minimum(size(frame[i...].value)) || throw(DimensionMismatch("[$i ] block not squared"))     
+	  issquared(frame[i...].value) || throw(DimensionMismatch("[$i ] block not squared"))  
 	end
     end
     for k = 1:size(frame, 1)
-        issymetric(frame[fill(k,ndims(frame))...].value)
+        issymetric(frame[fill(k,dims)...].value)
     end
 end
 
@@ -59,88 +60,77 @@ immutable BoxStructure{T <: AbstractFloat, S}
     end
 end
 
+transpose{T <: AbstractFloat}(bs::BoxStructure{T}, i::Array{Int}) = permutedims(bs.frame[sort(i)...].value, invperm(sortperm(i))) 
 
-transpose{T <: AbstractFloat}(bs::BoxStructure{T}, i::Array{Int}) = permutedims(bs.frame[sort(i)...].value, invperm(sortperm(i))) #cos tu jest zle
-
-size{T <: AbstractFloat}(m1::BoxStructure{T}) = m1.sizesegment, size(m1.frame, 1), m1.sizesegment*(size(m1.frame, 1)-1)+size(m1.frame[end,end].value,1)
+size{T <: AbstractFloat}(bsdata::BoxStructure{T}) = bsdata.sizesegment, size(bsdata.frame, 1), bsdata.sizesegment*(size(bsdata.frame, 1)-1)+size(bsdata.frame[end,end].value,1)
 convert{T <: AbstractFloat}(::Type{BoxStructure{T}}, data::Array{T}, segments::Int = 2) = BoxStructure(segmentise(data, segments))
 
 readsegments{T <: AbstractFloat}(i::Array{Int, 1}, data::BoxStructure{T}) = transpose(data, i)
  #     return isnull(data.frame[i...])? transpose(data.frame[sort(i)...].value): data.frame[i...].value
 
 
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, m1::BoxStructure{T}...) = mapreduce(i -> readsegments([k[1],i], m1[1])*readsegments([i,k[2]], m1[size(m1,1)]), +, 1:size(m1[1].frame, 1))
+segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T}...) = mapreduce(i -> readsegments([k[1],i], bsdata[1])*readsegments([i,k[2]], bsdata[size(bsdata,1)]), +, 1:size(bsdata[1].frame, 1))
 
-
-function testsize{T <: AbstractFloat}(m1::BoxStructure{T}...)
-    for i = 2:size(m1,1)
-        size(m1[1]) == size(m1[i]) || throw(DimensionMismatch("dims of B1 $(size(m1[1])) must equal to dims of B2 $(size(m1[i]))"))
+function testsize{T <: AbstractFloat}(bsdata::BoxStructure{T}...)
+    for i = 2:size(bsdata,1)
+        size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B2 $(size(bsdata[i]))"))
     end
 end
 
-
-function bsoperation1{T <: AbstractFloat}(bsfunction::Function, dims::Int,  m1::BoxStructure{T}...)
-    testsize(m1...)
-    limit = size(m1[1])[2]
-  #  map((x)-> bsfunction(collect(x), m1...), product(1:limit, 1:limit))
-    cat(2, map(j -> cat(1, map(i -> bsfunction([i,j], m1...)::Array{T}, 1:limit)...), 1:limit)...)
-#    eval(c(2, limit, bsfunction))
-
-end
-
-function bsoperation{T <: AbstractFloat}(bsfunction::Function, dims::Int, m1::BoxStructure{T}...)
-    testsize(m1...)
-    s = size(m1[1])
+function bstoarrayf{T <: AbstractFloat}(bsfunction::Function, dims::Int, bsdata::BoxStructure{T}...)
+    testsize(bsdata...)
+    s = size(bsdata[1])
     ret = zeros(T, fill(s[3], dims)...)
     for k in product(fill(1:s[2], dims)...)
-        ret[(map(i -> seg(k[i], s[1], s[3]), 1:dims))...] = bsfunction(collect(k), m1...)
+        ret[(map(i -> seg(k[i], s[1], s[3]), 1:dims))...] = bsfunction(collect(k), bsdata...)
     end
     ret
 end
+#  map((x)-> bsfunction(collect(x), bsdata...), product(1:limit, 1:limit))
 
-function operationonbs{T <: AbstractFloat}(f::Function, m1::BoxStructure{T}...)
-    dim = ndims(m1[1].frame)
-    ret = NullableArray(Array{T, dim}, size(m1[1].frame))
-      for i in product(fill(1:size(m1[1])[2], dim)...)
+function bstobsf{T <: AbstractFloat}(f::Function, bsdata::BoxStructure{T}...)
+    dim = ndims(bsdata[1].frame)
+    ret = NullableArray(Array{T, dim}, size(bsdata[1].frame))
+      for i in product(fill(1:size(bsdata[1])[2], dim)...)
 	  if issorted(i) 
-	    ret[i...] = f([i...], m1...)::Array{T}
+	    ret[i...] = f([i...], bsdata...)::Array{T}
 	  end
       end
       BoxStructure(ret)
 end
 
-function blockop{T <: AbstractFloat, S <: Real}(n::S, f::Function, m1::BoxStructure{T}...)
-    testsize(m1...)
-    operationonbs((i, m1...) -> f(n, map(k -> m1[k].frame[i...].value,1:size(m1,1))...)::Array{T} ,m1...)
+function blockop{T <: AbstractFloat, S <: Real}(n::S, f::Function, bsdata::BoxStructure{T}...)
+    testsize(bsdata...)
+    bstobsf((i, bsdata...) -> f(n, map(k -> bsdata[k].frame[i...].value,1:size(bsdata,1))...)::Array{T} ,bsdata...)
 end
 
-matricise{T <: AbstractFloat}(m1::BoxStructure{T}) = bsoperation(readsegments, ndims(m1.frame), m1)
-*{T <: AbstractFloat}(m1::BoxStructure{T},  m2::BoxStructure{T}) = bsoperation(segmentmult, 2, m1, m2)
+convert{T <: AbstractFloat}(::Type{Array{T}}, bsdata::BoxStructure{T}) = bstoarrayf(readsegments, ndims(bsdata.frame), bsdata)
+*{T <: AbstractFloat}(bsdata::BoxStructure{T, 2},  bsdata1::BoxStructure{T, 2}) = bstoarrayf(segmentmult, 2, bsdata, bsdata1)
 
-*{T <: AbstractFloat, S <: Real}(m1::BoxStructure{T}, n::S) = blockop(n, *, m1)
-+{T <: AbstractFloat, S <: Real}(m1::BoxStructure{T}, n::S) = blockop(n, +, m1)
-+{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T}) = blockop(0, +, m1, m2)
-.*{T <: AbstractFloat}(m1::BoxStructure{T}, m2::BoxStructure{T}) = blockop(1, (a::Int,b::Array{T},c::Array{T}) -> b.*c, m1, m2)
-square{T <: AbstractFloat}(m1::BoxStructure{T}) = operationonbs(segmentmult, m1)
-trace{T <: AbstractFloat}(m1::BoxStructure{T}) = mapreduce(i -> trace(m1.frame[i,i].value), +, 1:size(m1)[2])
-vecnorm{T <: AbstractFloat}(m1::BoxStructure{T}) = sqrt(trace(square(m1)))
-vec{T <: AbstractFloat}(m1::BoxStructure{T}) = Base.vec(matricise(m1))
+*{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = blockop(n, *, bsdata)
++{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = blockop(n, +, bsdata)
++{T <: AbstractFloat}(bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) = blockop(0, +, bsdata, bsdata1)
+.*{T <: AbstractFloat}(bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) = blockop(1, (a::Int,b::Array{T},c::Array{T}) -> b.*c, bsdata, bsdata1)
+square{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = bstobsf(segmentmult, bsdata)
+trace{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = mapreduce(i -> trace(bsdata.frame[i,i].value), +, 1:size(bsdata)[2])
+vecnorm{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = sqrt(trace(square(bsdata)))
+vec{T <: AbstractFloat}(bsdata::BoxStructure{T}) = Base.vec(convert(Array{Float64}, bsdata))
 
-slisemat{T <: AbstractFloat}(m2::Matrix{T}, slisesize::Int) = map(i -> m2[:,seg(i, slisesize, size(m2, 2))], 1:ceil(Int, size(m2,2)/slisesize))
+slisemat{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int) = map(i -> mat[:,seg(i, slisesize, size(mat, 2))], 1:ceil(Int, size(mat,2)/slisesize))
 
-function *{T <: AbstractFloat}(m1::BoxStructure{T}, m2::Matrix{T})
-    s = size(m1)
-    s[3] == size(m2,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(m2,1))"))
-    hcat(map(k -> vcat(map(k1 -> (mapreduce(j -> readsegments([k1,j], m1)*slisemat(m2, s[1])[k][seg(j, s[1], s[3]),:], +, 1:s[2])), 1:s[2])...), 1:ceil(Int, size(m2,2)/s[1]))...)
+function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
+    s = size(bsdata)
+    s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
+    hcat(map(k -> vcat(map(k1 -> (mapreduce(j -> readsegments([k1,j], bsdata)*slisemat(mat, s[1])[k][seg(j, s[1], s[3]),:], +, 1:s[2])), 1:s[2])...), 1:ceil(Int, size(mat,2)/s[1]))...)
 end
  #bs times vector
 
 function covbs{T <: AbstractFloat}(data::Matrix{T}, segments::Int = 2, corrected::Bool = false)
-    ((size(data,2)%segments) <= (size(data,2)÷segments)) || throw(DimensionMismatch("last segment len $(size(data,2)-segments*(size(data,1)÷segments)) > segment len $(size(data,2)÷segments)"))
+    segsizetest(transpose(data), segments)
     BoxStructure(creatnarray(data, (data::Matrix{T}, b1::Int, b2::Int) -> cov(data[:,seg(b1, size(data,2)÷segments, size(data, 2))], data[:,seg(b2, size(data,2)÷segments, size(data, 2))], corrected = corrected), segments))
 end
 
-export BoxStructure, convert, matricise, trace, vec, *, square, vecnorm, +, covbs, segmentise, BoxStructure1, structfeatures, readsegments
+export BoxStructure, convert, trace, vec, *, square, vecnorm, +, covbs
 end
 
 # dokladnosci przy dodawaniu
