@@ -37,12 +37,16 @@ module Test
     
     @test_approx_eq(smseg*smseg2, sm*sm2)
     @test_approx_eq(convert(Array{Float64},smseg+smseg2), sm+sm2)
+    @test_approx_eq(convert(Array{Float64},smseg-smseg2), sm-sm2)
     @test_approx_eq(convert(Array{Float64},smseg.*smseg2), sm.*sm2)
+    @test_approx_eq(convert(Array{Float64},smseg./smseg2), sm./sm2)
     @test_approx_eq(smseg*m, sm*m)
     
     @test_approx_eq(convert(Array{Float64},smseg*2.1), sm*2.1)
+    @test_approx_eq(convert(Array{Float64},smseg/2.1), sm/2.1)
     @test_approx_eq(convert(Array{Float64},smseg*2), sm*2)
     @test_approx_eq(convert(Array{Float64},smseg+2.1), sm+2.1)
+    @test_approx_eq(convert(Array{Float64},smseg-2.1), sm-2.1)
     @test_approx_eq(convert(Array{Float64},smseg+2), sm+2)
 
     @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
@@ -121,12 +125,16 @@ module Test
     @test_approx_eq(convert(Array{AbstractFloat},convert(BoxStructure{AbstractFloat}, Array{AbstractFloat}(stensor), 3)), Array{AbstractFloat}(stensor))
     
     @test_approx_eq(convert(Array{Float64},bstensor*2.1), stensor*2.1)
+    @test_approx_eq(convert(Array{Float64},bstensor/2.1), stensor/2.1)
     @test_approx_eq(convert(Array{Float64},bstensor*2), stensor*2)
     @test_approx_eq(convert(Array{Float64},bstensor+2.1), stensor+2.1)
+    @test_approx_eq(convert(Array{Float64},bstensor-2.1), stensor-2.1)
     @test_approx_eq(convert(Array{Float64},bstensor+2), stensor+2)
     @test_approx_eq(vec(bstensor), vec(stensor))
     @test_approx_eq(convert(Array{Float64},bstensor+bstensor1), stensor+stensor1)
+    @test_approx_eq(convert(Array{Float64},bstensor-bstensor1), stensor-stensor1)
     @test_approx_eq(convert(Array{Float64},bstensor.*bstensor1), stensor.*stensor1)
+    @test_approx_eq(convert(Array{Float64},bstensor./bstensor1), stensor./stensor1)
     
     @test_throws(DimensionMismatch, bstensor+bstensor2)
     @test_throws(DimensionMismatch, bstensor.*bstensor2)

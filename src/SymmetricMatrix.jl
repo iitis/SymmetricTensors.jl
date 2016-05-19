@@ -2,7 +2,7 @@ module SymmetricMatrix
 using NullableArrays
 using Iterators
 using Tensors
-import Base: trace, vec, vecnorm, +, *, .*, size, transpose
+import Base: trace, vec, vecnorm, +, -, *, .*, /, ./, size, transpose
 
 seg(i::Int, of::Int, limit::Int) = (i*of <= limit)? (((i-1)*of+1):(i*of)): (((i-1)*of+1):limit)
 
@@ -99,38 +99,42 @@ function bstobsf{T <: AbstractFloat}(f::Function, bsdata::BoxStructure{T}...)
       BoxStructure(ret)
 end
 
-function blockop{T <: AbstractFloat, S <: Real}(n::S, f::Function, bsdata::BoxStructure{T}...)
+function blockop{T <: AbstractFloat}(f::Function, bsdata::BoxStructure{T}...)
     testsize(bsdata...)
-    bstobsf((i, bsdata...) -> f(n, map(k -> bsdata[k].frame[i...].value,1:size(bsdata,1))...)::Array{T} ,bsdata...)
+    bstobsf((i, bsdata...) -> f(map(k -> bsdata[k].frame[i...].value,1:size(bsdata,1))...)::Array{T} ,bsdata...)
 end
 
+blockop{T <: AbstractFloat, S <: Real}(f::Function, bsdata::BoxStructure{T}, n::S) = bstobsf((i, bsdata) -> f(bsdata.frame[i...].value, n)::Array{T} ,bsdata)
 convert{T <: AbstractFloat}(::Type{Array{T}}, bsdata::BoxStructure{T}) = bstoarrayf(readsegments, ndims(bsdata.frame), bsdata)
-*{T <: AbstractFloat}(bsdata::BoxStructure{T, 2},  bsdata1::BoxStructure{T, 2}) = bstoarrayf(segmentmult, 2, bsdata, bsdata1)
 
-*{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = blockop(n, *, bsdata)
-+{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = blockop(n, +, bsdata)
-+{T <: AbstractFloat}(bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) = blockop(0, +, bsdata, bsdata1)
-.*{T <: AbstractFloat}(bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) = blockop(1, (a::Int,b::Array{T},c::Array{T}) -> b.*c, bsdata, bsdata1)
+#operations
+for op = (:+, :-, :*, :/)
+  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = blockop($op, bsdata, n)
+end
+for op = (:+, :-, :.*, :./)
+  @eval ($op){T <: AbstractFloat}(bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) = blockop($op, bsdata, bsdata1)
+end
 square{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = bstobsf(segmentmult, bsdata)
 trace{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = mapreduce(i -> trace(bsdata.frame[i,i].value), +, 1:size(bsdata)[2])
 vecnorm{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = sqrt(trace(square(bsdata)))
 vec{T <: AbstractFloat}(bsdata::BoxStructure{T}) = Base.vec(convert(Array{Float64}, bsdata))
 
+#multiplications 
+*{T <: AbstractFloat}(bsdata::BoxStructure{T, 2},  bsdata1::BoxStructure{T, 2}) = bstoarrayf(segmentmult, 2, bsdata, bsdata1)
 slisemat{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int) = map(i -> mat[:,seg(i, slisesize, size(mat, 2))], 1:ceil(Int, size(mat,2)/slisesize))
-
 function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
     s = size(bsdata)
     s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
     hcat(map(k -> vcat(map(k1 -> (mapreduce(j -> readsegments([k1,j], bsdata)*slisemat(mat, s[1])[k][seg(j, s[1], s[3]),:], +, 1:s[2])), 1:s[2])...), 1:ceil(Int, size(mat,2)/s[1]))...)
 end
- #bs times vector
 
+#covariance
 function covbs{T <: AbstractFloat}(data::Matrix{T}, segments::Int = 2, corrected::Bool = false)
     segsizetest(transpose(data), segments)
     BoxStructure(creatnarray(data, (data::Matrix{T}, b1::Int, b2::Int) -> cov(data[:,seg(b1, size(data,2)÷segments, size(data, 2))], data[:,seg(b2, size(data,2)÷segments, size(data, 2))], corrected = corrected), segments))
 end
 
-export BoxStructure, convert, trace, vec, *, square, vecnorm, +, covbs
+export BoxStructure, convert, +, -, *, /, trace, vec, square, vecnorm, covbs
 end
 
 # dokladnosci przy dodawaniu
