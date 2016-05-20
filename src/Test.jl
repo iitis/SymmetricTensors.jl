@@ -3,6 +3,7 @@ module Test
   using NullableArrays
   using SymmetricMatrix
   using Iterators
+  using Tensors
   importall SymmetricMatrix
   
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
@@ -135,6 +136,12 @@ module Test
     @test_approx_eq(convert(Array{Float64},bstensor-bstensor1), stensor-stensor1)
     @test_approx_eq(convert(Array{Float64},bstensor.*bstensor1), stensor.*stensor1)
     @test_approx_eq(convert(Array{Float64},bstensor./bstensor1), stensor./stensor1)
+    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 1), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 1))
+    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 2), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 2))
+    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 4), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 4))
+    
+    @test_throws(DimensionMismatch, modemult(bstensor, m[:,1:2], 4))
+    @test_throws(DimensionMismatch, modemult(bstensor, m[:,1:size(stensor, 1)], ndims(stensor)+1))
     
     @test_throws(DimensionMismatch, bstensor+bstensor2)
     @test_throws(DimensionMismatch, bstensor.*bstensor2)

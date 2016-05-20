@@ -55,7 +55,7 @@ immutable BoxStructure{T <: AbstractFloat, S}
     end
 end
 
-readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T}) = permutedims(bs.frame[sort(i)...].value, invperm(sortperm(i))) 
+readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T}) = permutedims(bs.frame[sort(i)...].value, invperm(sortperm(i)))
 size{T <: AbstractFloat}(bsdata::BoxStructure{T}) = bsdata.sizesegment, size(bsdata.frame, 1), bsdata.sizesegment*(size(bsdata.frame, 1)-1)+size(bsdata.frame[end,end].value,1)
 convert{T <: AbstractFloat}(::Type{BoxStructure{T}}, data::Array{T}, segments::Int = 2) = BoxStructure(segmentise(data, segments))
 segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T}) = mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata), +, 1:size(bsdata.frame, 1))
@@ -112,24 +112,44 @@ vec{T <: AbstractFloat}(bsdata::BoxStructure{T}) = Base.vec(convert(Array{Float6
 
 #multiplications 
 *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2},  bsdata1::BoxStructure{T, 2}) = bstoarrayf(segmentmult, 2, bsdata, bsdata1)
-slisemat{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int) = map(i -> mat[:,seg(i, slisesize, size(mat, 2))], 1:ceil(Int, size(mat,2)/slisesize))
-
-function *{T <: AbstractFloat}(bsdata::BoxStructure{T}, mat::Matrix{T})
+function slisemat{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int, mode::Int = 2)
+  if mode==2
+    return map(i -> mat[:,seg(i, slisesize, size(mat, mode))], 1:ceil(Int, size(mat,mode)/slisesize))
+  elseif mode==1
+    return map(i -> mat[seg(i, slisesize, size(mat, mode)),:], 1:ceil(Int, size(mat,mode)/slisesize))
+  else throw(DimensionMismatch("matrix mode $mode > 2"))
+  end
+end
+ 
+function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
     s = size(bsdata)
-    dims = ndims(bsdata.frame)
     s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
     ret = zeros(T, size(mat))
-    for k in product(1:s[2], 1:ceil(Int, size(mat,2)/s[1]))
-        ret[(map(i -> seg(k[i], s[1], size(mat,i)), 1:dims))...] = mapreduce(j -> readsegments([k[1],j], bsdata)*slisemat(mat, s[1])[k[2]][seg(j, s[1], s[3]),:], +, 1:s[2])
+    matslises = slisemat(mat, s[1])
+    for k in product(1:s[2], 1:size(matslises, 1))
+        ret[(map(i -> seg(k[i], s[1], size(mat,i)), 1:2))...] = mapreduce(j -> readsegments([k[1],j], bsdata)*(matslises[k[2]])[seg(j, s[1], s[3]),:], +, 1:s[2])
     end
     ret
 end
 
-# redundantny *
-function tt{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
+function generateperm(i::Int, size::Int) 
+    ret =  collect(1:size)
+    ret[i] = 1
+    ret[1] = i
+    ret
+end
+
+function modemult{T <: AbstractFloat}(bsdata::BoxStructure{T}, mat::Matrix{T}, mode::Int)
     s = size(bsdata)
-    s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
-    hcat(map(k -> vcat(map(k1 -> (mapreduce(j -> readsegments([k1,j], bsdata)*slisemat(mat, s[1])[k][seg(j, s[1], s[3]),:], +, 1:s[2])), 1:s[2])...), 1:ceil(Int, size(mat,2)/s[1]))...)
+    dim = ndims(bsdata.frame)
+    s[3] == size(mat,2) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
+    mode <= dim || throw(DimensionMismatch("mode $mode > tensor dimension $ndims"))
+    ret = zeros(T, size(mat,1), fill(s[3], dim-1)...)
+    matslises = slisemat(mat, s[1], 1)
+    for k in product(1:size(matslises, 1), fill(1:s[2], (dim-1))...)
+        ret[(map(i -> seg(k[i], s[1], size(ret,i)), 1:dim))...] = mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), matslises[k[1]][:,seg(j, s[1], s[3])] , 1), +, 1:s[2])
+    end
+    permutedims(ret, generateperm(mode, dim))
 end
 
 #covariance
@@ -138,7 +158,7 @@ function covbs{T <: AbstractFloat}(data::Matrix{T}, segments::Int = 2, corrected
     BoxStructure(creatnarray(data, (data::Matrix{T}, b1::Int, b2::Int) -> cov(data[:,seg(b1, size(data,2)÷segments, size(data, 2))], data[:,seg(b2, size(data,2)÷segments, size(data, 2))], corrected = corrected), segments))
 end
 
-export BoxStructure, convert, +, -, *, /, trace, vec, square, vecnorm, covbs, tt
+export BoxStructure, convert, +, -, *, /, trace, vec, square, vecnorm, covbs, modemult
 end
 
 # dokladnosci przy dodawaniu
