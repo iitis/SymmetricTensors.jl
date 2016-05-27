@@ -2,7 +2,7 @@ module SymmetricMatrix
 using NullableArrays
 using Iterators
 using Tensors
-import Base: trace, vec, vecnorm, +, -, *, .*, /, ./, size, transpose, convert
+import Base: trace, vec, vecnorm, +, -, *, .*, /, \, ./, size, transpose, convert
 
 seg(i::Int, of::Int, limit::Int) = (i*of <= limit)? (((i-1)*of+1):(i*of)): (((i-1)*of+1):limit)
 
@@ -42,7 +42,7 @@ end
     ret = NullableArray(Array{T, N}, fill(segments, N)...)
     @nloops $N i x -> (x==$N)? (1:segments): (i_{x+1}:segments) begin
         ind = @ntuple $N x -> i_{$N-x+1}
-            ret[ind...] = data[map(k::Int -> seg(k, ceil(Int, len/segments), len), ind)...]
+            @inbounds ret[ind...] = data[map(k::Int -> seg(k, ceil(Int, len/segments), len), ind)...]
         end
         BoxStructure(ret)
     end
@@ -78,7 +78,7 @@ end
         stumple = size( bsdata, 1)
         sframe = size(bsdata[1].frame)
         (stumple > 1)? testsize(bsdata...): ()
-        ret = NullableArray(Array{T, N}, sframe)
+        ret = similar(bsdata[1].frame)
         @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
             ind = @ntuple $N x -> i_{$N-x+1}
             ret[ind...] = op(map(k ->  bsdata[k].frame[ind...].value, 1:stumple)...)::Array{T, N}
@@ -87,26 +87,43 @@ end
     end
 end
 
+@generated function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
+    quote
+        sframe = size(bsdata.frame)
+        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
+            ind = @ntuple $N x -> i_{$N-x+1}
+            @inbounds bsdata.frame[ind...] = op(bsdata.frame[ind...].value, n)
+        end
+    end
+end
+
 @generated function operation{T<: AbstractFloat,N, S <: Real}(op::Function, bsdata::BoxStructure{T,N}, n::S)
     quote
         sframe = size(bsdata.frame)
-        ret = NullableArray(Array{T, N}, sframe)
+        ret = similar(bsdata.frame)
         @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
             ind = @ntuple $N x -> i_{$N-x+1}
-            ret[ind...] = op(bsdata.frame[ind...].value, n)::Array{T, N}
+            @inbounds ret[ind...] = op(bsdata.frame[ind...].value, n)::Array{T, N}
         end
         BoxStructure(ret)
     end
 end
-
 
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
 end
 
 for op = (:+, :-, :*, :/)
-  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S) = operation($op, bsdata, n)
+  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S, chnageval::Bool = false)  = begin
+    if chnageval
+      operation!(bsdata, $op, n)
+     else
+      operation($op, bsdata, n)
+     end
+   end
 end
+
+
 
 trace{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = mapreduce(i -> trace(bsdata.frame[i,i].value), +, 1:size(bsdata)[2])
 
@@ -194,7 +211,39 @@ function covbs{T <: AbstractFloat}(data::Matrix{T}, segments::Int = 2, corrected
     BoxStructure(ret)
 end
 
-export BoxStructure, convert, +, -, *, /, trace, vec, vecnorm, covbs, modemult, square
+#bcss 2d functions
+
+segmentmult{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T}, m::NullableArray{Array{T, N}}) =
+mapreduce(i -> readsegments([k[1],i], bsdata)*(m[i,k[2]].value), +, 1:size(bsdata)[2])
+
+segmentmult{T <: AbstractFloat, N}(k::Array{Int, 1}, m::NullableArray{Array{T, N}}, m1::NullableArray{Array{T, N}}) =
+mapreduce(i -> (m[i, k[1]].value)'*(m1[i,k[2]].value), +, 1:size(m1, 1))
+
+function slise{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int)
+    segments = ceil(Int, [size(mat)...]/slisesize)
+    ret = NullableArray(Array{T, 2}, segments...)
+    for k in product(1:segments[1], 1:segments[2])
+        ret[k...] = mat[seg(k[1], slisesize, size(mat, 1)),seg(k[2], slisesize, size(mat, 2))]
+    end
+    ret
+end
+
+function bcss{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T})
+    s = size(bsdata)
+    size(m,1) == s[3] || throw(DimensionMismatch("..."))
+    m = slise(m, s[1])
+    ret = similar(m)
+    for i = 1:s[2], j = 1:size(m,2)
+        ret[i,j] = segmentmult([i,j], bsdata, m)
+    end
+    ret1 = NullableArray(Array{T, 2}, size(m,2), size(m,2))
+    for j = 1:size(m,2), i = 1:j
+        ret1[i,j] = segmentmult([i,j], m, ret)
+    end
+    BoxStructure(ret1)
+end
+
+export BoxStructure, convert, +, -, *, /, trace, vec, vecnorm, covbs, modemult, square, bcss
 end
 
 # dokladnosci przy dodawaniu
