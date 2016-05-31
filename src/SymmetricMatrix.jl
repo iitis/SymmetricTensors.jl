@@ -87,16 +87,6 @@ end
     end
 end
 
-@generated function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
-    quote
-        sframe = size(bsdata.frame)
-        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds bsdata.frame[ind...] = op(bsdata.frame[ind...].value, n)
-        end
-    end
-end
-
 @generated function operation{T<: AbstractFloat,N, S <: Real}(op::Function, bsdata::BoxStructure{T,N}, n::S)
     quote
         sframe = size(bsdata.frame)
@@ -109,31 +99,44 @@ end
     end
 end
 
+@generated function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
+    quote
+        sframe = size(bsdata.frame)
+        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
+            ind = @ntuple $N x -> i_{$N-x+1}
+            @inbounds bsdata.frame[ind...] = op(bsdata.frame[ind...].value, n)
+        end
+    end
+end
+
+
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
 end
 
 for op = (:+, :-, :*, :/)
-  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S, chnageval::Bool = false)  = begin
-    if chnageval
-      operation!(bsdata, $op, n)
-     else
-      operation($op, bsdata, n)
-     end
-   end
+  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
 end
 
-
+add{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation!(bsdata, +, n)
 
 trace{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = mapreduce(i -> trace(bsdata.frame[i,i].value), +, 1:size(bsdata)[2])
-
 vec{T <: AbstractFloat}(bsdata::BoxStructure{T}) = Base.vec(convert(Array{Float64}, bsdata))
 vecnorm{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = norm(vec(bsdata))
 
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T}) =
- mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata), +, 1:size(bsdata.frame, 1))
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T}, bsdata1::BoxStructure{T}) =
- mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata1), +, 1:size(bsdata.frame, 1))
+segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}) =
+mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata), +, 1:size(bsdata.frame, 1))
+segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}, bsdata1::BoxStructure{T, 2}) =
+mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata1), +, 1:size(bsdata.frame, 1))
+segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}, m::NullableArray{Array{T, 2}}) =
+mapreduce(i -> readsegments([k[1],i], bsdata)*(m[i,k[2]].value), +, 1:size(bsdata)[2])
+
+segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, m::NullableArray{Array{T, 2}}, m1::NullableArray{Array{T, 2}}) =
+mapreduce(i -> (m[i, k[1]].value)'*(m1[i,k[2]].value), +, 1:size(m1, 1))
+
+segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}) =
+mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), m[k[1], j].value, 1), +, 1:size(bsdata)[2])
+
 
 
 function square{T <: AbstractFloat}(bsdata::BoxStructure{T, 2})
@@ -156,46 +159,46 @@ function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, bsdata1::BoxStructure
     ret
 end
 
-function slisemat{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int, mode::Int = 2)
-  segments = ceil(Int, size(mat,mode)/slisesize)
-  if mode==2
-    return map(i -> mat[:,seg(i, slisesize, size(mat, mode))], 1:segments)
-  elseif mode==1
-    return map(i -> mat[seg(i, slisesize, size(mat, mode)),:], 1:segments)
-  else throw(DimensionMismatch("matrix mode $mode > 2"))
-  end
-end
-
 function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
     s = size(bsdata)
     s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
-    ret = zeros(T, size(mat))
-    matslises = slisemat(mat, s[1])
-    for k in product(1:s[2], 1:size(matslises, 1))
-        ret[seg(k[1], s[1], size(mat,1)), seg(k[2], s[1], size(mat,2))] =
-        mapreduce(j -> readsegments([k[1],j], bsdata)*(matslises[k[2]])[seg(j, s[1], s[3]),:], +, 1:s[2])
+    ret = similar(mat)    
+    mat = slise(mat, s[1])
+    for i = 1:s[2], j = 1:size(mat,2)
+        ret[seg(i, s[1], size(ret,1)), seg(j, s[1], size(ret,2))] = segmentmult([i,j], bsdata, mat)
     end
     ret
 end
 
 function generateperm(i::Int, size::Int)
     ret =  collect(1:size)
-    ret[i] = 1
-    ret[1] = i
+    ret[i], ret[1] = 1, i
     ret
 end
 
-function modemult{T <: AbstractFloat}(bsdata::BoxStructure{T}, mat::Matrix{T}, mode::Int)
-    s = size(bsdata)
-    dim = ndims(bsdata.frame)
-    s[3] == size(mat,2) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
-    mode <= dim || throw(DimensionMismatch("mode $mode > tensor dimension $ndims"))
-    ret = zeros(T, size(mat,1), fill(s[3], dim-1)...)
-    matslises = slisemat(mat, s[1], 1)
-    for k in product(1:size(matslises, 1), fill(1:s[2], (dim-1))...)
-        ret[(map(i -> seg(k[i], s[1], size(ret,i)), 1:dim))...] = mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), matslises[k[1]][:,seg(j, s[1], s[3])] , 1), +, 1:s[2])
+
+function slise{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int)
+    segments = ceil(Int, [size(mat)...]/slisesize)
+    ret = NullableArray(Array{T, 2}, segments...)
+    for k in product(1:segments[1], 1:segments[2])
+        ret[k...] = mat[seg(k[1], slisesize, size(mat, 1)),seg(k[2], slisesize, size(mat, 2))]
     end
-    permutedims(ret, generateperm(mode, dim))
+    ret
+end
+
+@generated function modemult{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, mat::Matrix{T}, mode::Int)
+  quote
+    s = size(bsdata)
+    s[3] == size(mat,2) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
+    mode <= N || throw(DimensionMismatch("mode $mode > tensor dimension $ndims"))
+    ret = zeros(T, size(mat,1), fill(s[3], N-1)...)
+    m = slise(mat, s[1])
+    @nloops $N i x -> (x==$N)? (1:size(m, 1)): (1:s[2]) begin
+	ind = @ntuple $N x -> i_{$N-x+1}
+        ret[(map(i -> seg(ind[i], s[1], size(ret,i)), 1:N))...] = segmentmult1([ind...], bsdata, m)
+    end
+    permutedims(ret, generateperm(mode, N))
+   end
 end
 
 #covariance
@@ -213,24 +216,9 @@ end
 
 #bcss 2d functions
 
-segmentmult{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T}, m::NullableArray{Array{T, N}}) =
-mapreduce(i -> readsegments([k[1],i], bsdata)*(m[i,k[2]].value), +, 1:size(bsdata)[2])
-
-segmentmult{T <: AbstractFloat, N}(k::Array{Int, 1}, m::NullableArray{Array{T, N}}, m1::NullableArray{Array{T, N}}) =
-mapreduce(i -> (m[i, k[1]].value)'*(m1[i,k[2]].value), +, 1:size(m1, 1))
-
-function slise{T <: AbstractFloat}(mat::Matrix{T}, slisesize::Int)
-    segments = ceil(Int, [size(mat)...]/slisesize)
-    ret = NullableArray(Array{T, 2}, segments...)
-    for k in product(1:segments[1], 1:segments[2])
-        ret[k...] = mat[seg(k[1], slisesize, size(mat, 1)),seg(k[2], slisesize, size(mat, 2))]
-    end
-    ret
-end
-
-function bcss{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T})
+function bcss{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, m::Matrix{T})
     s = size(bsdata)
-    size(m,1) == s[3] || throw(DimensionMismatch("..."))
+    s[3]  == size(m,1)||throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(m,1))"))
     m = slise(m, s[1])
     ret = similar(m)
     for i = 1:s[2], j = 1:size(m,2)
@@ -243,7 +231,27 @@ function bcss{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T})
     BoxStructure(ret1)
 end
 
-export BoxStructure, convert, +, -, *, /, trace, vec, vecnorm, covbs, modemult, square, bcss
+@generated function bcss1{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T})
+    quote
+    s = size(bsdata)
+    s[3]  == size(m,1)||throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(m,1))"))
+    m = slise(m, s[1])
+    ret = NullableArray(Array{T, N}, fill(size(m,2), N)...)
+    @nloops $N i x -> (x==$N)? (1:size(m,2)): (i_{x+1}:size(m,2)) begin
+        ind = @ntuple $N x -> i_{$N-x+1}
+        temp = NullableArray(Array{T, N}, s[2], 1)
+        for k = 1:s[2]
+            temp[k, 1] = segmentmult([k,ind[2:end]...], bsdata, m)
+        end
+        ret[ind...] = segmentmult([ind[1],1], m, temp)
+    end
+    BoxStructure(ret)
+    end
+end
+
+
+
+export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1
 end
 
 # dokladnosci przy dodawaniu

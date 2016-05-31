@@ -54,7 +54,7 @@ module Test
     @test_approx_eq(convert(Array{Float64}, bcss(smseg, m[:,1:12])), (m[:,1:12])'*(smseg*m[:,1:12]))
 
     m4, sm4, smseg4 = generatedata()
-    +(smseg4, 2.1, true)
+    add(smseg4, 2.1)
     @test_approx_eq(convert(Array{Float64},smseg4), sm4+2.1)
 
     @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
