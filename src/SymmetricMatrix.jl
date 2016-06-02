@@ -124,24 +124,26 @@ trace{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = mapreduce(i -> trace(bsd
 vec{T <: AbstractFloat}(bsdata::BoxStructure{T}) = Base.vec(convert(Array{Float64}, bsdata))
 vecnorm{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}) = norm(vec(bsdata))
 
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}) =
-mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata), +, 1:size(bsdata.frame, 1))
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}, bsdata1::BoxStructure{T, 2}) =
-mapreduce(i -> readsegments([k[1],i], bsdata)*readsegments([i,k[2]], bsdata1), +, 1:size(bsdata.frame, 1))
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, bsdata::BoxStructure{T, 2}, m::NullableArray{Array{T, 2}}) =
-mapreduce(i -> readsegments([k[1],i], bsdata)*(m[i,k[2]].value), +, 1:size(bsdata)[2])
+segmentmult{T <: AbstractFloat}(k1::Int, k2::Int, bsdata::BoxStructure{T, 2}) =
+mapreduce(i -> readsegments([k1,i], bsdata)*readsegments([i,k2], bsdata), +, 1:size(bsdata.frame, 1))
+segmentmult{T <: AbstractFloat}(k1::Int, k2::Int, bsdata::BoxStructure{T, 2}, bsdata1::BoxStructure{T, 2}) =
+mapreduce(i -> readsegments([k1,i], bsdata)*readsegments([i,k2], bsdata1), +, 1:size(bsdata.frame, 1))
+segmentmult{T <: AbstractFloat}(k1::Int, k2::Int, bsdata::BoxStructure{T, 2}, m::NullableArray{Array{T, 2}}) =
+mapreduce(i -> readsegments([k1,i], bsdata)*(m[i,k2].value), +, 1:size(bsdata)[2])
+segmentmult{T <: AbstractFloat}(k1::Int, k2::Int, m::NullableArray{Array{T, 2}}, m1::NullableArray{Array{T, 2}}) =
+mapreduce(i -> (m[i, k1].value)'*(m1[i,k2].value), +, 1:size(m1, 1))
 
-segmentmult{T <: AbstractFloat}(k::Array{Int, 1}, m::NullableArray{Array{T, 2}}, m1::NullableArray{Array{T, 2}}) =
-mapreduce(i -> (m[i, k[1]].value)'*(m1[i,k[2]].value), +, 1:size(m1, 1))
-
-segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}) =
-mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), m[k[1], j].value, 1), +, 1:size(bsdata)[2])
+segmentmult2{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}, mode::Int = 1) =
+mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), m[k[1], j].value, mode), +, 1:size(bsdata)[2])
 
 function generateperm(i::Int, ar::Array{Int})
     ret = ar
     ret[i], ret[1] = ar[1], ar[i]
     ret
 end
+
+segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}, mode::Int = 1) =
+mapreduce(j -> Tensors.modemult(readsegments([generateperm(mode, [j, k[2:end]...])...], bsdata), m[k[1], j].value, mode), +, 1:size(bsdata)[2])
 
 segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, m::NullableArray{Array{T, N}}, m1::NullableArray{Matrix{T}}, mode::Int = 1) =
 mapreduce(j -> Tensors.modemult(m[generateperm(mode, [j, k[2:end]...])...].value, m1[k[1], j].value, mode), +, 1:size(m1, 1))
@@ -152,7 +154,7 @@ function square{T <: AbstractFloat}(bsdata::BoxStructure{T, 2})
     s = size(bsdata)
     ret = NullableArray(Matrix{T}, size(bsdata.frame))
     for i = 1:s[2], j = i:s[2]
-        ret[i,j] = segmentmult([i,j], bsdata)
+        ret[i,j] = segmentmult(i,j, bsdata)
     end
     BoxStructure(ret)
 end
@@ -162,7 +164,7 @@ function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, bsdata1::BoxStructure
     s == size(bsdata1) || throw(DimensionMismatch("dims of B1 $(size(bsdata)) must equal to dims of B2 $(size(bsdata1))"))
     ret = zeros(T, s[3], s[3])
     for i = 1:s[2], j = 1:s[2]
-        temp = segmentmult([i,j], bsdata, bsdata1)
+        temp = segmentmult(i,j, bsdata, bsdata1)
         ret[seg(i, s[1], s[3]), seg(j, s[1], s[3])] = temp
     end
     ret
@@ -174,7 +176,7 @@ function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
     ret = similar(mat)    
     mat = slise(mat, s[1])
     for i = 1:s[2], j = 1:size(mat,2)
-        ret[seg(i, s[1], size(ret,1)), seg(j, s[1], size(ret,2))] = segmentmult([i,j], bsdata, mat)
+        ret[seg(i, s[1], size(ret,1)), seg(j, s[1], size(ret,2))] = segmentmult(i,j, bsdata, mat)
     end
     ret
 end
@@ -227,10 +229,10 @@ function bcss{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, m::Matrix{T})
     for i = 1:size(m,2)
       temp = NullableArray(Array{T, 2}, s[2], 1)
       for k = 1:s[2]
-          temp[k, 1] = segmentmult([k,i], bsdata, m)
+          temp[k, 1] = segmentmult(k,i, bsdata, m)
       end
       for j = 1:i
-	ret[j,i] = segmentmult([j,1], m, temp)
+	ret[j,i] = segmentmult(j,1, m, temp)
       end
    end
    BoxStructure(ret)
@@ -264,9 +266,9 @@ end
         ind = @ntuple $N x -> i_{$N-x+1}
         temp = NullableArray(Array{T, N}, s[2], 1)
         for k = 1:s[2]
-            temp[k, 1] = segmentmult([k,ind[2:end]...], bsdata, m)
+            temp[k, 1] = segmentmult(k,ind[2]..., bsdata, m)
         end
-        ret[ind...] = segmentmult([ind[1],1], m, temp)
+        ret[ind...] = segmentmult(ind[1],1, m, temp)
     end
     BoxStructure(ret)
     end
