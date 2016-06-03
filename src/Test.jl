@@ -31,7 +31,7 @@ module Test
     m2, sm2, smseg2 = generatedata(1233)
     badsegments = 7
 
-    @test_approx_eq(convert(Array{Float64}, (smseg)), sm)
+    @test_approx_eq(convert(Array{Float64}, smseg), sm)
     @test_approx_eq(convert(Array{Float16},convert(BoxStructure{Float16}, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
     @test_approx_eq(convert(Array{Float32},convert(BoxStructure{Float32}, Matrix{Float32}(sm), 5)), Matrix{Float32}(sm))
     @test_approx_eq(convert(Array{AbstractFloat},convert(BoxStructure{AbstractFloat}, Matrix{AbstractFloat}(sm), 5)), Matrix{AbstractFloat}(sm))

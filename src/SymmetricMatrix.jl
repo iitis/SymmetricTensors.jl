@@ -4,24 +4,28 @@ using Iterators
 using Tensors
 import Base: trace, vec, vecnorm, +, -, *, .*, /, \, ./, size, transpose, convert
 
-seg(i::Int, of::Int, limit::Int) = (i*of <= limit)? (((i-1)*of+1):(i*of)): (((i-1)*of+1):limit)
+seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit)
 
-issymetric{T <: AbstractFloat}(data::Array{T}, tool::Float64 = 1e-7) = map(i -> (maximum(abs(unfold(data, 1)-unfold(data, i))) < tool) || throw(DimensionMismatch("array is not symmetric")), 2:ndims(data))
+function issymetric{T <: AbstractFloat}(data::Array{T}, atol::Float64 = 1e-7)
+  for i=2:ndims(data)
+    (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(DimensionMismatch("array is not symmetric"))
+  end
+end
 segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $len-segments*(len÷segments)) > segment len $(len÷segments)"))
 
 function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
-     fsize = size(frame, 1)
-     minimum([size(frame)...] .== fsize) || throw(DimensionMismatch("frame not square"))
-     for i in product(fill(1:fsize, S)...)
-	if !issorted(i)
-	  isnull(frame[i...]) || throw(ArgumentError("underdiagonal block [$i ] not null"))
-	elseif maximum(i) < fsize
-	  minimum([size(frame[i...].value)...] .== size(frame[i...].value, 1)) || throw(DimensionMismatch("[$i ] block not square"))
-	end
+  fsize = size(frame, 1)
+  all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
+  not_nulls = !frame.isnull
+  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
+  quote
+    @nloops $S i x->x==$S ? 1:fsize : i_{x+1}:fsize begin
+      minimum(size($frame[i].value)) .== size($frame[i].value, 1) || throw(DimensionMismatch("[$i ] block not square"))
     end
-    for k = 1:fsize
-        issymetric(frame[fill(k,S)...].value)
-    end
+  end
+  for i=1:fsize
+    issymetric(frame[fill(i, S)...].value)
+  end
 end
 
 immutable BoxStructure{T <: AbstractFloat, S}
@@ -33,44 +37,50 @@ immutable BoxStructure{T <: AbstractFloat, S}
     end
 end
 
-@generated function convert{T <: AbstractFloat, N}(::Type{BoxStructure{T}}, data::Array{T, N}, segments::Int = 2)
-    quote
-    issymetric(data)
-    len = size(data,1)
-    segsizetest(len, segments)
-    (len%segments == 0)? () : segments += 1
-    ret = NullableArray(Array{T, N}, fill(segments, N)...)
-    @nloops $N i x -> (x==$N)? (1:segments): (i_{x+1}:segments) begin
-        ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds ret[ind...] = data[map(k::Int -> seg(k, ceil(Int, len/segments), len), ind)...]
-        end
-        BoxStructure(ret)
+function convert{T <: AbstractFloat, N}(::Type{BoxStructure{T}}, data::Array{T, N}, segments::Int = 2)
+  issymetric(data)
+  len = size(data,1)
+  segsizetest(len, segments)
+  (len%segments == 0)? () : segments += 1
+  ret = NullableArray(Array{T, N}, fill(segments, N)...)
+  @eval begin
+    @nloops $N i x -> (x==$N)? (1:$segments): (i_{x+1}:$segments) begin
+      ind = @ntuple $N x -> i_{$N-x+1}
+      @inbounds $ret[ind...] = $data[map(k::Int -> seg(k, ceil(Int, $len/$segments), $len), ind)...]
     end
+  end
+  BoxStructure(ret)
 end
 
-readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T}) = permutedims(bs.frame[sort(i)...].value, invperm(sortperm(i)))
-size{T <: AbstractFloat}(bsdata::BoxStructure{T}) = bsdata.sizesegment, size(bsdata.frame, 1), bsdata.sizesegment*(size(bsdata.frame, 1)-1)+size(bsdata.frame[end,end].value,1)
+function readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T})
+  sortidx = sortperm(i)
+  permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
+end
+
+function size{T <: AbstractFloat}(bsdata::BoxStructure{T})
+  segsize = bsdata.sizesegment
+  numsegments = size(bsdata.frame, 1)
+  numdata = segsize * (numsegments-1) + size(bsdata.frame[end].value, 1)
+  segsize, numsegments, numdata
+end
 
 function testsize{T <: AbstractFloat}(bsdata::BoxStructure{T}...)
-    for i = 2:size(bsdata,1)
-        size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
-    end
+  for i = 2:size(bsdata,1)
+    size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
+  end
 end
 
-@generated function convert{T<: AbstractFloat,N}(::Type{Array{T}}, bsdata::BoxStructure{T,N})
-    quote
-        s = size(bsdata)
-        ret = zeros(T, fill(s[3], N)...)
-        @nloops $N i x -> (x==$N)? (1:s[2]): (i_{x+1}:s[2]) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
-            temp = bsdata.frame[ind...].value
-            for ind1 in permutations(ind)
-                ret[(map(k -> seg(ind1[k], s[1], s[3]), 1:N))...] =
-                permutedims(temp, invperm(sortperm(collect(ind1))))
-            end
-        end
-        ret
+function convert{T<: AbstractFloat,N}(::Type{Array{T}}, bsdata::BoxStructure{T,N})
+  s = size(bsdata)
+  ret = zeros(T, fill(s[3], N)...)
+  @eval begin
+    @nloops $N i x->1:$s[2] begin
+      readind = @ntuple $N x -> i_{$N-x+1}
+      writeind = @ntuple $N x -> seg(i_{$N-x+1}, $s[1], $s[3])
+      $ret[writeind...] = readsegments(collect(readind), $bsdata)
     end
+  end
+  ret
 end
 
 @generated function operation{T<: AbstractFloat,N}(op::Function, bsdata::BoxStructure{T,N}...)
@@ -173,7 +183,7 @@ end
 function *{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, mat::Matrix{T})
     s = size(bsdata)
     s[3] == size(mat,1) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
-    ret = similar(mat)    
+    ret = similar(mat)
     mat = slise(mat, s[1])
     for i = 1:s[2], j = 1:size(mat,2)
         ret[seg(i, s[1], size(ret,1)), seg(j, s[1], size(ret,2))] = segmentmult(i,j, bsdata, mat)
