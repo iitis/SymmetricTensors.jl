@@ -276,7 +276,7 @@ end
 
 
 
-export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, size, slise, segmentmult1, segmentmult
+export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, size, slise, segmentmult1, segmentmult, segmentmult2
 end
 
 # dokladnosci przy dodawaniu
