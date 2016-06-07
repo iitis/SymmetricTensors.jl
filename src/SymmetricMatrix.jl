@@ -143,7 +143,7 @@ mapreduce(i -> readsegments([k1,i], bsdata)*(m[i,k2].value), +, 1:size(bsdata)[2
 segmentmult{T <: AbstractFloat}(k1::Int, k2::Int, m::NullableArray{Array{T, 2}}, m1::NullableArray{Array{T, 2}}) =
 mapreduce(i -> (m[i, k1].value)'*(m1[i,k2].value), +, 1:size(m1, 1))
 
-segmentmult2{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}, mode::Int = 1) =
+segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}, mode::Int = 1) =
 mapreduce(j -> Tensors.modemult(readsegments([j, k[2:end]...], bsdata), m[k[1], j].value, mode), +, 1:size(bsdata)[2])
 
 function generateperm(i::Int, ar::Array{Int})
@@ -151,13 +151,6 @@ function generateperm(i::Int, ar::Array{Int})
     ret[i], ret[1] = ar[1], ar[i]
     ret
 end
-
-segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, bsdata::BoxStructure{T, N}, m::NullableArray{Matrix{T}}, mode::Int = 1) =
-mapreduce(j -> Tensors.modemult(readsegments([generateperm(mode, [j, k[2:end]...])...], bsdata), m[k[1], j].value, mode), +, 1:size(bsdata)[2])
-
-segmentmult1{T <: AbstractFloat, N}(k::Array{Int, 1}, m::NullableArray{Array{T, N}}, m1::NullableArray{Matrix{T}}, mode::Int = 1) =
-mapreduce(j -> Tensors.modemult(m[generateperm(mode, [j, k[2:end]...])...].value, m1[k[1], j].value, mode), +, 1:size(m1, 1))
-
 
 
 function square{T <: AbstractFloat}(bsdata::BoxStructure{T, 2})
@@ -248,23 +241,6 @@ function bcss{T <: AbstractFloat}(bsdata::BoxStructure{T, 2}, m::Matrix{T})
    BoxStructure(ret)
 end
 
-function bcss3{T <: AbstractFloat}(bsdata::BoxStructure{T, 3}, m::Matrix{T})
-    s = size(bsdata)
-    s[3]  == size(m,2)||throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(m,2))"))
-    m = slise(m, s[1])
-        ret = NullableArray(Array{T, 3}, fill(size(m,1), 2)...)
-    for i = 1:size(m,1)
-      temp = NullableArray(Array{T, 3}, s[2], 1, 1)
-      for k = 1:s[2]
-          temp[k, 1, 1] = segmentmult1([i,k,1], bsdata, m)
-      end
-      for j = 1:i
-	ret[j,i] = segmentmult1([j,1,1], temp, m, 1)
-      end
-   end
-   ret
-end
-
 
 @generated function bcss1{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T})
     quote
@@ -284,9 +260,41 @@ end
     end
 end
 
+function bcsscel{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, mat::Matrix{T}, i::Array)
+    ret = modemult(bsdata, mat[i[1],:], N)
+    for j = 2:N
+        ret = Tensors.modemult(ret, mat[i[j],:], N-j+1)
+    end
+    ret[1]
+end
+
+@generated function bcssf{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T}, j::Array, boxsize::Int)
+    quote
+    ret = zeros(T, fill(boxsize, N)...)
+        @nloops $N i x -> (j[$N-x+1]*boxsize > size(m,1))? (1:(size(m,1)-(j[$N-x+1]-1)*boxsize)) : 1:boxsize begin
+            iread = @ntuple $N x -> i_{$N-x+1}+(j[x]-1)*boxsize
+            iwrite = @ntuple $N x -> i_{$N-x+1}
+            ret[iwrite...] = bcsscel(bsdata, m, [iread...])
+        end
+        ret
+    end
+end
+
+@generated function bcssclass{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, m::Matrix{T}, boxsize::Int)
+        quote
+        s = ceil(Int, size(m,1)/boxsize)
+        ret = NullableArray(Array{T, N}, fill(s, N)...)
+        @nloops $N i x -> (x==$N)? (1:s): (i_{x+1}:s) begin
+            ind = @ntuple $N x -> i_{$N-x+1}
+            ret[ind...] = bcssf(bsdata, m, [ind...], boxsize)
+        end
+        BoxStructure(ret)
+    end
+end
 
 
-export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, size, slise, segmentmult1, segmentmult
+
+export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, bcssclass
 end
 
 # dokladnosci przy dodawaniu

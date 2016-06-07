@@ -7,6 +7,15 @@ module Test
   importall SymmetricMatrix
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
+  
+ 
+  rmat = symmetrise(randn(6,6))
+  converttest = convert(BoxStructure{Float64}, rmat)
+  @test_approx_eq(converttest.frame[1,1].value, rmat[1:3, 1:3])
+  @test_approx_eq(converttest.frame[1,2].value, rmat[1:3, 4:6])
+  @test_approx_eq(converttest.frame[2,2].value, rmat[4:6, 4:6])
+  @test(isnull(converttest.frame[2,1]))
+  
 
   function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 6, l::Int = 1000)
       srand(seed)
@@ -167,9 +176,15 @@ module Test
     @test_throws(MethodError, convert(BoxStructure{Float64}, randtensor(Complex64, 4, 10), 3))
     @test_throws(TypeError, convert(BoxStructure{Complex64}, randtensor(Complex64, 4, 10), 3))
 
+    function multimodemult{T <: AbstractFloat, N}(t::Array{T,N}, mat::Matrix{T})
+      ret = t
+      for i = 1:N
+	  ret = Tensors.modemult(ret, mat, i)
+      end
+      ret
+    end
 
-
-
-
+    @test_approx_eq(convert(Array{Float64}, bcssclass(bstensor, m[1:6, 1:10], 3)), multimodemult(stensor, m[1:6, 1:10]))
+    # 1:6 to narazie bo jeszcze bcssclass nie w pelni gotowa
 
 end
