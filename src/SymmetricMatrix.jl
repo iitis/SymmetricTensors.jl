@@ -36,7 +36,7 @@ immutable BoxStructure{T <: AbstractFloat, S}
         new{T, S}(frame, size(frame[fill(1,S)...].value,1))
     end
 end
-
+#del T
 function convert{T <: AbstractFloat, N}(::Type{BoxStructure{T}}, data::Array{T, N}, segments::Int = 2)
   issymetric(data)
   len = size(data,1)
@@ -51,6 +51,10 @@ function convert{T <: AbstractFloat, N}(::Type{BoxStructure{T}}, data::Array{T, 
   end
   BoxStructure(ret)
 end
+
+# function convert{T <: AbstractFloat, S <: AbstractFloat}(::Type{BoxStructure{T}}, bs::BoxStructure{S})
+#   BoxStructure(convert(NullableArray{T}, bs.frame))
+# end
 
 function readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T})
   sortidx = sortperm(i)
@@ -70,43 +74,48 @@ function testsize{T <: AbstractFloat}(bsdata::BoxStructure{T}...)
   end
 end
 
-function convert{T<: AbstractFloat,N}(::Type{Array{T}}, bsdata::BoxStructure{T,N})
+function convert{T<:AbstractFloat, N}(::Type{Array{T}}, bsdata::BoxStructure{T,N})
   s = size(bsdata)
   ret = zeros(T, fill(s[3], N)...)
   @eval begin
     @nloops $N i x->1:$s[2] begin
       readind = @ntuple $N x -> i_{$N-x+1}
       writeind = @ntuple $N x -> seg(i_{$N-x+1}, $s[1], $s[3])
-      $ret[writeind...] = readsegments(collect(readind), $bsdata)
+      @inbounds $ret[writeind...] = readsegments(collect(readind), $bsdata)
     end
   end
   ret
 end
 
-@generated function operation{T<: AbstractFloat,N}(op::Function, bsdata::BoxStructure{T,N}...)
-    quote
-        stumple = size( bsdata, 1)
-        sframe = size(bsdata[1].frame)
-        (stumple > 1)? testsize(bsdata...): ()
-        ret = similar(bsdata[1].frame)
-        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
-            ret[ind...] = op(map(k ->  bsdata[k].frame[ind...].value, 1:stumple)...)::Array{T, N}
-        end
-        BoxStructure(ret)
+@generated function sub2ind_gen{N}(bsdata::BoxStructure{T,N}..., I::Int...)
+      n = size(bsdata.frame, 1)
+       end
+
+
+function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}...)
+  l = size(bsdata, 1)
+  n = size(bsdata[1].frame)
+  (l > 1)? testsize(bsdata...):()
+  ret = similar(bsdata[1].frame)
+  @eval begin
+    @nloops $N i x -> ((x==$N ? 1 : i_{x+1}) :$n[x]) begin
+      ind = @ntuple $N x -> i_{$N-x+1}
+      @inbounds $ret[ind...] = $op(map(k ->  $bsdata[k].frame[ind...].value, 1:$l)...)
     end
+  end
+  BoxStructure(ret)
 end
 
-@generated function operation{T<: AbstractFloat,N, S <: Real}(op::Function, bsdata::BoxStructure{T,N}, n::S)
-    quote
-        sframe = size(bsdata.frame)
-        ret = similar(bsdata.frame)
-        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds ret[ind...] = op(bsdata.frame[ind...].value, n)::Array{T, N}
-        end
-        BoxStructure(ret)
+function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}, a::Real)
+  n = size(bsdata.frame)
+  ret = similar(bsdata.frame)
+  @eval begin
+    @nloops $N i x -> ((x==$N ? 1 : i_{x+1}) :$n[x]) begin
+      ind = @ntuple $N x -> i_{$N-x+1}
+      @inbounds $ret[ind...] = $op($bsdata.frame[ind...].value, $a)
     end
+  end
+  BoxStructure(ret)
 end
 
 @generated function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
