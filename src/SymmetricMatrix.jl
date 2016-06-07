@@ -87,7 +87,7 @@ function convert{T<:AbstractFloat, N}(::Type{Array{T}}, bsdata::BoxStructure{T,N
   ret
 end
 
-@generated function sub2ind_gen{N}(bsdata::BoxStructure{T,N}..., I::Int...)
+@generated function sub2ind_gen{N, T}(bsdata::BoxStructure{T,N}, I::Int)
       n = size(bsdata.frame, 1)
        end
 
