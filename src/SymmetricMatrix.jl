@@ -37,20 +37,31 @@ immutable BoxStructure{T <: AbstractFloat, S}
     end
 end
 #del T
+function indices(N::Int, n::Int)
+    ret = Array{Int}[]
+    @eval begin
+        @nloops $N i x -> (x==$N)? (1:$n): (i_{x+1}:$n) begin
+            ind = @ntuple $N x -> i_{$N-x+1}
+            push!($ret, [ind...])
+        end
+    end
+    ret
+end
+
 function convert{T <: AbstractFloat, N}(::Type{BoxStructure{T}}, data::Array{T, N}, segments::Int = 2)
   issymetric(data)
   len = size(data,1)
   segsizetest(len, segments)
   (len%segments == 0)? () : segments += 1
   ret = NullableArray(Array{T, N}, fill(segments, N)...)
-  @eval begin
-    @nloops $N i x -> (x==$N)? (1:$segments): (i_{x+1}:$segments) begin
-      ind = @ntuple $N x -> i_{$N-x+1}
-      @inbounds $ret[ind...] = $data[map(k::Int -> seg(k, ceil(Int, $len/$segments), $len), ind)...]
+    ind = indices(N, segments)
+    for writeind in ind
+        readind = (map(k::Int -> seg(k, ceil(Int, len/segments), len), writeind)...)
+        ret[writeind...] = data[readind...]
     end
-  end
   BoxStructure(ret)
 end
+
 
 # function convert{T <: AbstractFloat, S <: AbstractFloat}(::Type{BoxStructure{T}}, bs::BoxStructure{S})
 #   BoxStructure(convert(NullableArray{T}, bs.frame))
@@ -77,57 +88,40 @@ end
 function convert{T<:AbstractFloat, N}(::Type{Array{T}}, bsdata::BoxStructure{T,N})
   s = size(bsdata)
   ret = zeros(T, fill(s[3], N)...)
-  @eval begin
-    @nloops $N i x->1:$s[2] begin
-      readind = @ntuple $N x -> i_{$N-x+1}
-      writeind = @ntuple $N x -> seg(i_{$N-x+1}, $s[1], $s[3])
-      @inbounds $ret[writeind...] = readsegments(collect(readind), $bsdata)
-    end
-  end
+    for i = 1:(s[2]^N)
+        readind = ind2sub((fill(s[2], N)...), i)
+        writeind = (map(k -> seg(readind[k], s[1], s[3]), 1:N)...)
+        ret[writeind...] = readsegments(collect(readind), bsdata)
+      end
   ret
 end
 
-@generated function sub2ind_gen{N, T}(bsdata::BoxStructure{T,N}, I::Int)
-      n = size(bsdata.frame, 1)
-       end
-
-
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}...)
-  l = size(bsdata, 1)
-  n = size(bsdata[1].frame)
-  (l > 1)? testsize(bsdata...):()
+  n = size(bsdata, 1)
+  (n > 1)? testsize(bsdata...):()
   ret = similar(bsdata[1].frame)
-  @eval begin
-    @nloops $N i x -> ((x==$N ? 1 : i_{x+1}) :$n[x]) begin
-      ind = @ntuple $N x -> i_{$N-x+1}
-      @inbounds $ret[ind...] = $op(map(k ->  $bsdata[k].frame[ind...].value, 1:$l)...)
-    end
+  ind = indices(N, size(bsdata[1].frame, 1))
+  for i in ind
+    ret[i...] = op(map(k ->  bsdata[k].frame[i...].value, 1:n)...)
   end
   BoxStructure(ret)
 end
 
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}, a::Real)
-  n = size(bsdata.frame)
   ret = similar(bsdata.frame)
-  @eval begin
-    @nloops $N i x -> ((x==$N ? 1 : i_{x+1}) :$n[x]) begin
-      ind = @ntuple $N x -> i_{$N-x+1}
-      @inbounds $ret[ind...] = $op($bsdata.frame[ind...].value, $a)
-    end
+  ind = indices(N, size(bsdata.frame, 1))
+  for i in ind
+    ret[i...] = op(bsdata.frame[i...].value, a)
   end
   BoxStructure(ret)
 end
 
-@generated function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
-    quote
-        sframe = size(bsdata.frame)
-        @nloops $N i x -> (x==$N)? (1:sframe[x]): (i_{x+1}:sframe[x]) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds bsdata.frame[ind...] = op(bsdata.frame[ind...].value, n)
-        end
-    end
+function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
+      ind = indices(N, size(bsdata.frame, 1))
+      for i in ind
+        bsdata.frame[i...] = op(bsdata.frame[i...].value, n)
+      end
 end
-
 
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
@@ -218,6 +212,21 @@ end
    end
 end
 
+function modemult1{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, mat::Matrix{T}, mode::Int)
+    s = size(bsdata)
+    s[3] == size(mat,2) || throw(DimensionMismatch("size of B1 $(s[3]) must equal to size of A $(size(mat,1))"))
+    mode <= N || throw(DimensionMismatch("mode $mode > tensor dimension $ndims"))
+    ret = zeros(T, size(mat,1), fill(s[3], N-1)...)
+    m = slise(mat, s[1])
+    for i = 1:(s[2]^(N-1)*size(m, 1))
+        readind = ind2sub((size(mat,1), fill(s[2], N-1)...), i)
+        println(readind)
+        writeind = (map(k -> seg(readind[k], s[1], size(ret,k)), 1:N)...)
+        ret[writeind...] = segmentmult1([readind...], bsdata, m)
+    end
+    permutedims(ret, generateperm(mode, collect(1:N)))
+end
+
 #covariance
 
 function covbs{T <: AbstractFloat}(data::Matrix{T}, segments::Int = 2, corrected::Bool = false)
@@ -303,7 +312,7 @@ end
 
 
 
-export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, bcssclass
+export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss, bcss1, bcssclass, indices
 end
 
 # dokladnosci przy dodawaniu
