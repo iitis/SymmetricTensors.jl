@@ -295,7 +295,7 @@ end
 
 function momentbc{T <: AbstractFloat}(m::Matrix{T}, N::Int, segments::Int = 2)
     len = size(m,2)
-    #segsizetest(len, segments)
+    segsizetest(len, segments)
     (len%segments == 0)? () : segments += 1
     ret = NullableArray(Array{T, N}, fill(segments, N)...)
     segsize = ceil(Int, len/segments)
@@ -305,6 +305,33 @@ function momentbc{T <: AbstractFloat}(m::Matrix{T}, N::Int, segments::Int = 2)
     end
     BoxStructure(ret)
 end
+
+#cumulants
+
+function permute(array::UnitRange{Int64}, n::Int)
+    a = Array{Array{Int,1},1}[]
+    for p in partitions(array, n)
+        add = true
+        for k in p
+            (size(k,1) in [1, size(array, 1)])? (add = false) :()
+        end
+        add? (push!(a, p)) :()
+    end
+    return a
+end
+
+function productseg{T <: AbstractFloat}(N::Int, part::Array{Array{Array{Int,1},1},1}, c::Array{T}...)
+    s = size(c[1], 1)
+    ret = zeros(T, fill(s, N)...)
+    ret1 = zeros(T, fill(s, N)...)
+    for i = 1:(s^N)
+        ind = ind2sub((fill(s, N)...), i)
+        f(i) = mapreduce(j -> c[j][ind[part[i][j]]...], *, 1:2)
+        ret[ind...] = mapreduce(i ->f(i), +, 1:size(part,1))
+    end
+    ret
+end
+
 
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
