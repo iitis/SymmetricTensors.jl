@@ -308,32 +308,79 @@ end
 
 #cumulants
 
-function permute(array::UnitRange{Int64}, n::Int)
-    a = Array{Array{Int,1},1}[]
-    for p in partitions(array, n)
-        add = true
-        for k in p
-            (size(k,1) in [1, size(array, 1)])? (add = false) :()
-        end
-        add? (push!(a, p)) :()
-    end
-    return a
-end
-
-function productseg{T <: AbstractFloat}(N::Int, part::Array{Array{Array{Int,1},1},1}, c::Array{T}...)
+function productseg2{T <: AbstractFloat}(N::Int, c::Array{T}...)
     s = size(c[1], 1)
     ret = zeros(T, fill(s, N)...)
-    ret1 = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
         ind = ind2sub((fill(s, N)...), i)
-        f(i) = mapreduce(j -> c[j][ind[part[i][j]]...], *, 1:2)
-        ret[ind...] = mapreduce(i ->f(i), +, 1:size(part,1))
+        ret[ind...] = c[1][ind[1:2]...]*c[2][ind[3:4]...]
     end
+    ret 
+end
+
+function permutebox{T <: AbstractFloat}(N::Int, j::Array{Int}, bscum::BoxStructure{T})
+    permutedims(bscum.frame[sort(j)...].value, invperm(sortperm(j)))
+end
+
+function partations(part::Array, j::Array)
+    n = size(part, 1)
+    ret = Array{Int, 1}[]
+    push!(ret, j[1:part[1]])
+    map(s -> push!(ret, j[(1+cumsum(part)[(s-1)]):cumsum(part)[s]]), 2:n)
     ret
 end
 
 
+function createperm1(part::Array)
+    s = cumsum(part)[end]
+    perm = collect(1:s)
+    ret = []
+    if part == [2,2]
+        permut = [1,3,6]
+    elseif part == [2,3]
+        permut = [1, 7, 15, 22, 55, 62, 67, 81, 96, 106]
+    end
+    for p in permut
+        push!(ret, nthperm(perm,p))
+    end
+    ret
+end
+
+function permutebc{T <: AbstractFloat}(part::Array, bscum::BoxStructure{T}...)
+    N = cumsum(part)[end]
+    s = size(bscum[1])
+    n = size(part, 1)
+    ret = NullableArray(Array{T, N}, fill(s[2], N)...)
+    ind = indices(N, s[2])
+    p = createperm1(part)
+    bsseq = []
+    for i in part
+        for bs in bscum
+            (ndims(bs.frame) == i)? (push!(bsseq, bs)): ()
+        end
+    end     
+    for i in ind
+        temp = zeros(T, fill(s[1], N)...)
+        pp = partations(part, i)
+        #temp = zeros(T, map(t -> (size(bsseq[i[pp[t]]]), 1:s)))
+        temp = zeros(T, (size(bsseq[1].frame[pp[1]...].value)..., size(bsseq[2].frame[pp[2]...].value)...))
+        for perm in p
+            j = i[:]
+            permute!(j, perm)
+            k = partations(part, j)
+            temp += permutedims(productseg2(N, map(i -> permutebox(N, k[i], bsseq[i]), 
+            1:n)...), perm)
+        end
+        ret[i...] = temp
+    end
+    BoxStructure(ret)
+end
+
+cumulant2{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 2, segments)
+cumulant3{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 3, segments)
+cumulant4{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T, 2}, segments::Int = 2) = momentbc(m, 4, segments) - permutebc([2,2], c2)
+
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre
+bcssclass, indices, momentbc, centre, permutebc, cumulant2, cumulant3, cumulant4
 end
