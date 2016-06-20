@@ -308,68 +308,59 @@ end
 
 #cumulants
 
-function productseg2{T <: AbstractFloat}(N::Int, c::Array{T}...)
+
+function imputbs(pe::Array{Array{Int,1},1}, ls::Array{Int, 1})
+    ret = []
+    for p in pe
+        push!(ret, findfirst(ls, size(p, 1)))
+    end
+    ret
+end
+
+function productseg{T <: AbstractFloat}(part::Array, k::Int, c::Array{T}...)
+    N = cumsum(part)[end]
     s = size(c[1], 1)
     ret = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
         ind = ind2sub((fill(s, N)...), i)
-        ret[ind...] = c[1][ind[1:2]...]*c[2][ind[3:4]...]
+        pe = permuteind([ind...], part, k)
+        ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(part, 1))
     end
-    ret 
+        ret
 end
 
-function permutebox{T <: AbstractFloat}(N::Int, j::Array{Int}, bscum::BoxStructure{T})
-    permutedims(bscum.frame[sort(j)...].value, invperm(sortperm(j)))
-end
-
-function partations(part::Array, j::Array)
-    n = size(part, 1)
-    ret = Array{Int, 1}[]
-    push!(ret, j[1:part[1]])
-    map(s -> push!(ret, j[(1+cumsum(part)[(s-1)]):cumsum(part)[s]]), 2:n)
-    ret
-end
-
-
-function createperm1(part::Array)
-    s = cumsum(part)[end]
-    perm = collect(1:s)
+function permuteind(ind::Array{Int}, s::Array{Int}, i::Int)
     ret = []
-    if part == [2,2]
-        permut = [1,3,6]
-    elseif part == [2,3]
-        permut = [1, 7, 15, 22, 55, 62, 67, 81, 96, 106]
+    k = 1
+    for p in partitions(ind, size(s,1))
+        if (mapreduce(i -> (size(p[i], 1) in s), *, 1:size(s,1)))
+            (k == i)? (return p): ()
+            k += 1
+        end
     end
-    for p in permut
-        push!(ret, nthperm(perm,p))
-    end
-    ret
+    [0,0]
 end
 
-function permutebc{T <: AbstractFloat}(part::Array, bscum::BoxStructure{T}...)
+function comb(a::Array{Int})
+    issorted(a) || throw(ArgumentError("list not sorted"))
+    thesame = mapreduce(i -> factorial(findlast(a, i)-findfirst(a, i)+1), *, 2:maximum(a))
+    div(factorial(cumsum(a)[end]), mapreduce(i -> factorial(a[i]), *, 1:size(a,1))*thesame)
+end
+
+function pbc{T <: AbstractFloat}(part::Array, bscum::BoxStructure{T}...)
+    ls = map(i -> ndims(bscum[i].frame), 1:size(bscum, 1))
     N = cumsum(part)[end]
     s = size(bscum[1])
     n = size(part, 1)
+    m = comb(part)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
-    ind = indices(N, s[2])
-    p = createperm1(part)
-    bsseq = []
-    for i in part
-        for bs in bscum
-            (ndims(bs.frame) == i)? (push!(bsseq, bs)): ()
-        end
-    end     
+    ind = indices(N, s[2])           
     for i in ind
         temp = zeros(T, fill(s[1], N)...)
-        pp = partations(part, i)
-        #temp = zeros(T, map(t -> (size(bsseq[i[pp[t]]]), 1:s)))
-        temp = zeros(T, (size(bsseq[1].frame[pp[1]...].value)..., size(bsseq[2].frame[pp[2]...].value)...))
-        for perm in p
-            j = i[:]
-            permute!(j, perm)
-            k = partations(part, j)
-            temp += permutedims(productseg2(N, map(i -> permutebox(N, k[i], bsseq[i]), 
-            1:n)...), perm)
+        for k = 1:m
+            pe = permuteind([i...], part, k)
+            inn = imputbs(pe, ls)
+            temp += productseg(part, k, map(i -> bscum[inn[i]].frame[pe[i]...].value, 1:size(part, 1))...)
         end
         ret[i...] = temp
     end
@@ -378,9 +369,19 @@ end
 
 cumulant2{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 2, segments)
 cumulant3{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 3, segments)
-cumulant4{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T, 2}, segments::Int = 2) = momentbc(m, 4, segments) - permutebc([2,2], c2)
+cumulant4{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T, 2}, segments::Int = 2) = momentbc(m, 4, segments) - pbc([2,2], c2)
+cumulant5{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T}, c3::BoxStructure{T}, segments::Int = 2) = momentbc(m, 5, segments) - pbc([2,3], c2, c3)
+cumulant6{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T}, c3::BoxStructure{T}, c4::BoxStructure{T}, segments::Int = 2) = momentbc(m, 6, segments) - pbc([2,2,2], c2) - pbc([2,4], c2, c4) - pbc([3,3], c3)
 
+function cumulants{T <: AbstractFloat}(data::Matrix{T}, seg::Int = 2)
+    c2 = cumulant2(data, seg)
+    c3 = cumulant3(data, seg)
+    c4 = cumulant4(data, c2, seg);
+    c5 = cumulant5(data, c2, c3, seg);
+    c6 = cumulant6(data, c2, c3, c4, seg);
+    c2, c3, c4, c5, c6
+end
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre, permutebc, cumulant2, cumulant3, cumulant4
+bcssclass, indices, momentbc, centre, cumulants
 end
