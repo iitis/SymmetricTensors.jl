@@ -308,59 +308,73 @@ end
 
 #cumulants
 
+function splitind(n::Array{Int,1}, pe::Array{Array{Int, 1},1})
+    ret = similar(pe)
+    for k = 1:size(pe,1)
+        ret[k] = [map(i -> n[pe[k][i]], 1:size(pe[k],1))...]
+    end
+    ret
+end
+
+function productseg{T <: AbstractFloat}(part::Array, pk, c::Array{T}...)
+    N = cumsum(part)[end]
+    s = size(c[1], 1)
+    ret = zeros(T, fill(s, N)...)
+    for i = 1:(s^N)
+        ind = ind2sub((fill(s, N)...), i)
+        pe = splitind([ind...], pk)
+        ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(part, 1))
+    end
+        ret
+end
+
+function partitionsind(s::Array{Int})
+    ind = 1:(cumsum(s)[end])
+    ret = Array{Array{Int, 1}, 1}[]
+    for p in partitions(ind, size(s,1))
+        (mapreduce(i -> (size(p[i], 1) in s), *, 1:size(s,1)))? push!(ret, p): ()
+    end
+    ret
+end
+
+function partitionsind1(s::Array{Int, 1}, ls::Array{Int, 1})
+    ind = 1:(cumsum(s)[end])
+    ret = Array{Array{Int, 1}, 1}[]
+    ret1 = Array{Int, 1}[]
+    for p in partitions(ind, size(s,1))
+        if (mapreduce(i -> (size(p[i], 1) in s), *, 1:size(s,1)))
+            push!(ret, p)
+            push!(ret1, [map(i -> findfirst(ls, size(p[i], 1)), 1:size(p,1))...])
+        end
+    end
+    ret, ret1
+end
 
 function imputbs(pe::Array{Array{Int,1},1}, ls::Array{Int, 1})
-    ret = []
+    ret = Int[]
     for p in pe
         push!(ret, findfirst(ls, size(p, 1)))
     end
     ret
 end
 
-function productseg{T <: AbstractFloat}(part::Array, k::Int, c::Array{T}...)
-    N = cumsum(part)[end]
-    s = size(c[1], 1)
-    ret = zeros(T, fill(s, N)...)
-    for i = 1:(s^N)
-        ind = ind2sub((fill(s, N)...), i)
-        pe = permuteind([ind...], part, k)
-        ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(part, 1))
-    end
-        ret
-end
-
-function permuteind(ind::Array{Int}, s::Array{Int}, i::Int)
-    ret = []
-    k = 1
-    for p in partitions(ind, size(s,1))
-        if (mapreduce(i -> (size(p[i], 1) in s), *, 1:size(s,1)))
-            (k == i)? (return p): ()
-            k += 1
-        end
-    end
-    [0,0]
-end
-
-function comb(a::Array{Int})
-    issorted(a) || throw(ArgumentError("list not sorted"))
-    thesame = mapreduce(i -> factorial(findlast(a, i)-findfirst(a, i)+1), *, 2:maximum(a))
-    div(factorial(cumsum(a)[end]), mapreduce(i -> factorial(a[i]), *, 1:size(a,1))*thesame)
-end
-
-function pbc{T <: AbstractFloat}(part::Array, bscum::BoxStructure{T}...)
+function pbc{T <: AbstractFloat}(part::Array{Int}, bscum::BoxStructure{T}...)
     ls = map(i -> ndims(bscum[i].frame), 1:size(bscum, 1))
     N = cumsum(part)[end]
     s = size(bscum[1])
     n = size(part, 1)
-    m = comb(part)
+    p, innn = partitionsind1(part, ls)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
-    ind = indices(N, s[2])           
+    ind = indices(N, s[2]) 
     for i in ind
-        temp = zeros(T, fill(s[1], N)...)
-        for k = 1:m
-            pe = permuteind([i...], part, k)
-            inn = imputbs(pe, ls)
-            temp += productseg(part, k, map(i -> bscum[inn[i]].frame[pe[i]...].value, 1:size(part, 1))...)
+	temp = zeros(T, fill(s[1], N)...)
+	j = 1
+        for pk in p
+            pe = splitind([i...], pk)
+ #           inn = imputbs(pk, ls)
+#            println(inn, innn[j])
+            temp += productseg(part, pk, map(i -> bscum[innn[j][i]].frame[pe[i]...].value, 1:n)...)
+            j += 1
         end
         ret[i...] = temp
     end
