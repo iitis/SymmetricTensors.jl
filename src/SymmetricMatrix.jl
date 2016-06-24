@@ -316,22 +316,9 @@ function splitind(n::Array{Int,1}, pe::Array{Array{Int, 1},1})
     ret
 end
 
-function productseg{T <: AbstractFloat}(part::Array{Int, 1}, perm::Array{Array{Int, 1},1}, c::Array{T}...)
-    N = cumsum(part)[end]
+function productseg{T <: AbstractFloat}(perm::Array{Array{Int, 1},1}, c::Array{T}...)
+    N = size(vcat(map(i -> [size(c[i])...], 1:size(c, 1))...), 1)
     s = size(c[1], 1)
-    ret = zeros(T, fill(s, N)...)
-    for i = 1:(s^N)
-        ind = ind2sub((fill(s, N)...), i)
-        pe = splitind([ind...], perm)
-        ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(perm, 1))
-    end
-    ret
-end
-
-function productseg{T <: AbstractFloat}(part::Array{Int, 1}, perm::Array{Array{Int, 1},1}, c::Array{T}...)
-    N = cumsum(part)[end]
-    s = size(c[1], 1)
-    println(collect(zip(map(i -> size(c[i]), 1:size(c, 1))...)))
     ret = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
         ind = ind2sub((fill(s, N)...), i)
@@ -367,13 +354,57 @@ function pbc{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
 	      j = 1
         for pk in p
             pe = splitind([i...], pk)
-            temp += productseg(part, pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
+            temp += productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
             j += 1
         end
         ret[i...] = temp
     end
     BoxStructure(ret)
 end
+
+# to ma mniejszy sens
+
+function productseg1{T <: AbstractFloat}(perm::Array{Array{Int, 1},1}, c::Array{T}...)
+    outputs = vcat(map(i -> [size(c[i])...], 1:size(c, 1))...)
+    N = size(outputs,1)
+    innu = maximum(outputs)^N
+#    elnumb = mapreduce(i -> outputs[i], *, 1:size(outputs,1))
+    ret = zeros(T, outputs...)
+    for i = 1:innu
+        ind = ind2sub((outputs...), i)
+        pe = splitind([ind...], perm)
+        try
+          ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(perm, 1))
+        catch:
+          ()
+        end
+    end
+    ret
+end
+
+function pbc1{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
+    ls = map(i -> ndims(bscum[i].frame), 1:size(bscum, 1))
+    N = cumsum(part)[end]
+    s = size(bscum[1])
+    n = size(part, 1)
+    p, indpart = partitionsind(part, ls)
+    ret = NullableArray(Array{T, N}, fill(s[2], N)...)
+    ind = indices(N, s[2])
+    for i in ind
+      	j = 1
+        pk = p[1]
+        pe = splitind([i...], pk)
+	      temp = productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
+        for pk in p[2:end]
+            j += 1
+            pe = splitind([i...], pk)
+            temp += productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
+        end
+        ret[i...] = temp
+    end
+    BoxStructure(ret)
+  end
+
 
 cumulant2{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 2, segments)
 cumulant3{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 3, segments)
@@ -391,5 +422,5 @@ function cumulants{T <: AbstractFloat}(data::Matrix{T}, seg::Int = 2)
 end
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre, cumulants, productseg
+bcssclass, indices, momentbc, centre, cumulants, productseg, pbc
 end
