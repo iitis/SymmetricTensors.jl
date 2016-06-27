@@ -275,7 +275,7 @@ function centre{T<:AbstractFloat}(data::Matrix{T})
     centred = zeros(data)
     n = size(data, 2)
     for i = 1:n
-        centred[:,i] = data[:,i]-mean(data[:,i])
+        @inbounds centred[:,i] = data[:,i]-mean(data[:,i])
     end
     centred
 end
@@ -288,7 +288,7 @@ function momentseg{T <: AbstractFloat}(r::Array{T, 2}...)
     ret = zeros(T, dims...)
     for i = 1:mapreduce(k -> dims[k], *, 1:N)
         ind = ind2sub((dims...), i)
-        ret[ind...] = momentel(map(k -> r[k][:,ind[k]], 1:N)...)
+        @inbounds ret[ind...] = momentel(map(k -> r[k][:,ind[k]], 1:N)...)
     end
     ret
 end
@@ -301,7 +301,7 @@ function momentbc{T <: AbstractFloat}(m::Matrix{T}, N::Int, segments::Int = 2)
     segsize = ceil(Int, len/segments)
     ind = indices(N, segments)
     for i in ind
-        ret[i...] = momentseg(map(k -> m[:,seg(i[k], segsize, len)], 1:N)...)
+        @inbounds ret[i...] = momentseg(map(k -> m[:,seg(i[k], segsize, len)], 1:N)...)
     end
     BoxStructure(ret)
 end
@@ -311,19 +311,27 @@ end
 function splitind(n::Array{Int,1}, pe::Array{Array{Int, 1},1})
     ret = similar(pe)
     for k = 1:size(pe,1)
-        ret[k] = [map(i -> n[pe[k][i]], 1:size(pe[k],1))...]
+        @inbounds ret[k] = [map(i -> n[pe[k][i]], 1:size(pe[k],1))...]
     end
     ret
 end
 
-function productseg{T <: AbstractFloat}(perm::Array{Array{Int, 1},1}, c::Array{T}...)
-    N = size(vcat(map(i -> [size(c[i])...], 1:size(c, 1))...), 1)
-    s = size(c[1], 1)
+function addzeros{T <: AbstractFloat, N}(s::Int, imputarr::Array{T,N})
+    if !all(collect(size(imputarr)) .== s)
+        ret = zeros(T, fill(s, N)...)
+        ind = map(k -> 1:size(imputarr,k), 1:N)
+        ret[ind...] = imputarr
+        return ret
+    end
+    imputarr
+end
+
+function productseg{T <: AbstractFloat}(s::Int, N::Int, perm::Array{Array{Int, 1},1}, c::Array{T}...)
     ret = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
         ind = ind2sub((fill(s, N)...), i)
         pe = splitind([ind...], perm)
-        ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(perm, 1))
+        @inbounds ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(perm, 1))
     end
     ret
 end
@@ -349,62 +357,31 @@ function pbc{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
     p, indpart = partitionsind(part, ls)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
     ind = indices(N, s[2])
+    (s[1]*s[2] == s[3])?  (block(i::Int, j::Int, pe::Array{Array{Int,1},1}) = bscum[indpart[j][i]].frame[pe[i]...].value) : ()
     for i in ind
-	      temp = zeros(T, fill(s[1], N)...)
-	      j = 1
-        for pk in p
-            pe = splitind([i...], pk)
-            temp += productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
-            j += 1
-        end
-        ret[i...] = temp
+      temp = zeros(T, fill(s[1], N)...)
+      j = 1
+      if ((s[1]*s[2] != s[3])*(s[2] in i))
+          block(i::Int, j::Int,  pe::Array{Array{Int,1},1}) = addzeros(s[1], bscum[indpart[j][i]].frame[pe[i]...].value)
+      elseif (s[1]*s[2] != s[3])
+          block(i::Int, j::Int, pe::Array{Array{Int,1},1}) = bscum[indpart[j][i]].frame[pe[i]...].value
+      end
+      for pk in p
+          pe = splitind([i...], pk)
+          @inbounds temp += productseg(s[1], N, pk, map(i -> block(i, j, pe), 1:n)...)
+          j += 1
+      end
+      if (s[1]*s[2] == s[3])
+          @inbounds ret[i...] = temp
+      elseif (s[2] in i)
+          range = map(k -> ((s[2] == i[k])? (1:(s[3]%s[1])) : (1:s[1])), 1:size(i,1))
+          @inbounds ret[i...] = temp[range...]
+        else
+          @inbounds ret[i...] = temp
+      end
     end
     BoxStructure(ret)
 end
-
-# to ma mniejszy sens
-
-function productseg1{T <: AbstractFloat}(perm::Array{Array{Int, 1},1}, c::Array{T}...)
-    outputs = vcat(map(i -> [size(c[i])...], 1:size(c, 1))...)
-    N = size(outputs,1)
-    innu = maximum(outputs)^N
-#    elnumb = mapreduce(i -> outputs[i], *, 1:size(outputs,1))
-    ret = zeros(T, outputs...)
-    for i = 1:innu
-        ind = ind2sub((outputs...), i)
-        pe = splitind([ind...], perm)
-        try
-          ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(perm, 1))
-        catch:
-          ()
-        end
-    end
-    ret
-end
-
-function pbc1{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
-    ls = map(i -> ndims(bscum[i].frame), 1:size(bscum, 1))
-    N = cumsum(part)[end]
-    s = size(bscum[1])
-    n = size(part, 1)
-    p, indpart = partitionsind(part, ls)
-    ret = NullableArray(Array{T, N}, fill(s[2], N)...)
-    ind = indices(N, s[2])
-    for i in ind
-      	j = 1
-        pk = p[1]
-        pe = splitind([i...], pk)
-	      temp = productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
-        for pk in p[2:end]
-            j += 1
-            pe = splitind([i...], pk)
-            temp += productseg(pk, map(i -> bscum[indpart[j][i]].frame[pe[i]...].value, 1:n)...)
-        end
-        ret[i...] = temp
-    end
-    BoxStructure(ret)
-  end
-
 
 cumulant2{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 2, segments)
 cumulant3{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 3, segments)
@@ -421,6 +398,24 @@ function cumulants{T <: AbstractFloat}(data::Matrix{T}, seg::Int = 2)
     c2, c3, c4, c5, c6
 end
 
+# to sa dodatki rodzaj rozszezonej notatki
+
+redundantcol(n::Int, s::Int) =  n*ceil(Int, s/n) - s
+
+function convertlim{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N}, limit::Int = 0)
+  s = size(bsdata)
+  (0 < limit < s[3])? (si = limit): (si = s[3])
+  ret = zeros(T, fill(si, N)...)
+    for i = 1:(s[2]^N)
+        readind = ind2sub((fill(s[2], N)...), i)
+        writeind = (map(k -> seg(readind[k], s[1], si), 1:N)...)
+        range = map(k -> ((s[1]*readind[k] > si)? (1:(si%s[1])) : (1:s[1])), 1:N)
+        ret[writeind...] = readsegments(collect(readind), bsdata)[range...]
+      end
+  ret
+end
+
+
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre, cumulants, productseg, pbc
+bcssclass, indices, momentbc, centre, cumulants, productseg, pbc, partitionsind, productseg, convertlim
 end
