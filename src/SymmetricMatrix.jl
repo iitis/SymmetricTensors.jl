@@ -383,19 +383,40 @@ function pbc{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
     BoxStructure(ret)
 end
 
-cumulant2{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 2, segments)
-cumulant3{T <: AbstractFloat}(m::Matrix{T}, segments::Int = 2) = momentbc(m, 3, segments)
-cumulant4{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T, 2}, segments::Int = 2) = momentbc(m, 4, segments) - pbc([2,2], c2)
-cumulant5{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T}, c3::BoxStructure{T}, segments::Int = 2) = momentbc(m, 5, segments) - pbc([2,3], c2, c3)
-cumulant6{T <: AbstractFloat}(m::Matrix{T}, c2::BoxStructure{T}, c3::BoxStructure{T}, c4::BoxStructure{T}, segments::Int = 2) = momentbc(m, 6, segments) - pbc([2,2,2], c2) - pbc([2,4], c2, c4) - pbc([3,3], c3)
+function findpart(n::Int)
+    ret = Array{Int, 1}[]
+    for k = 2:floor(Int, n/2)
+        for p in partitions(n,k)
+            (1 in p)? (): push!(ret, sort(p))
+        end
+    end
+    ret
+end
 
-function cumulants{T <: AbstractFloat}(data::Matrix{T}, seg::Int = 2)
-    c2 = cumulant2(data, seg)
-    c3 = cumulant3(data, seg)
-    c4 = cumulant4(data, c2, seg);
-    c5 = cumulant5(data, c2, c3, seg);
-    c6 = cumulant6(data, c2, c3, c4, seg);
-    c2, c3, c4, c5, c6
+function cumulantn{T <: AbstractFloat}(m::Matrix{T}, n::Int, segments::Int, c::BoxStructure{T}...)
+      ret = momentbc(m, n, segments)
+      for p in findpart(n)
+          ret -= pbc(p, c...)
+      end
+      ret
+end
+
+function cumulants{T <: AbstractFloat}(n::Int, data::Matrix{T}, seg::Int = 2)
+    c2 = momentbc(data, 2, seg)
+    c3 = momentbc(data, 3, seg)
+    c4 = cumulantn(data, 4, seg, c2);
+    c5 = cumulantn(data, 5, seg, c2, c3);
+    c6 = cumulantn(data, 6, seg, c2, c3, c4);
+    if n <= 6
+      return c2, c3, c4, c5, c6
+    elseif n == 7
+      c7 = cumulantn(data, 7, seg, c2, c3, c4, c5);
+      return c2, c3, c4, c5, c6, c7
+    elseif n == 8
+      c7 = cumulantn(data, 7, seg, c2, c3, c4, c5);
+      c8 = cumulantn(data, 8, seg, c2, c3, c4, c5, c6);
+      return c2, c3, c4, c5, c6, c7, c8
+    end
 end
 
 # to sa dodatki rodzaj rozszezonej notatki
@@ -417,5 +438,5 @@ end
 
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre, cumulants, productseg, pbc, partitionsind, productseg, convertlim
+bcssclass, indices, momentbc, centre, cumulants, productseg, pbc, partitionsind, productseg, cumulants1
 end

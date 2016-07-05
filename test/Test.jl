@@ -4,6 +4,7 @@ module Test
   using SymmetricMatrix
   using Iterators
   using Tensors
+  using Distributions
   importall SymmetricMatrix
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
@@ -422,15 +423,33 @@ module Test
   end
   
   dat = centre(data[1:25,1:6])
-  dat1 = centre(data[1:15,1:5])
  
   @test_approx_eq(convert(Array, momentbc(dat, 3, 2)), moment_n(dat, 3))
   @test_approx_eq(convert(Array, momentbc(dat, 4, 2)), moment_n(dat, 4))
   @test_approx_eq(convert(Array, momentbc(dat, 5, 2)), moment_n(dat, 5))
   
+  # kopula Claytona rozklady brzegowe Weibulla 
+  
+  function clcopulagen(t::Int, m::Int)
+    theta = 1.02
+    coredist = Gamma(1,1/theta)
+    srand(1256)
+    x = rand(t)
+    srand(1235)
+    u = rand(t,m)
+    ret = zeros(t,m)
+    invphi(x::Array{Float64,1}, theta::Float64) = (1+ theta.*x).^(-1/theta)
+    for i = 1:m
+        uniform = invphi(-log(u[:,i])./quantile(coredist, x), theta)
+        ret[:,i] = quantile(Weibull(1+0.01*i,1), uniform)
+    end
+    ret
+  end
+  
+  dat1 = centre(clcopulagen(15, 5))
  
   c = calculate_n_cumulants(dat1, 6)
-  c2, c3, c4, c5, c6 = cumulants(dat1, 2)
+  c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
   
   @test_approx_eq(convert(Array, c2),c["c2"])
   @test_approx_eq(convert(Array, c3),c["c3"])
