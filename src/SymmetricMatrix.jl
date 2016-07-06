@@ -40,8 +40,9 @@ immutable BoxStructure{T <: AbstractFloat, S}
 end
 
 #generates the set of sorted indices to run any operation on bs in a single loop.
+#todo moze da sie zrobic w tuplach
 function indices(N::Int, n::Int)
-    ret = Array{Int}[]
+    ret = Vector{Int}[]
     @eval begin
         @nloops $N i x -> (x==$N)? (1:$n): (i_{x+1}:$n) begin
             ind = @ntuple $N x -> i_{$N-x+1}
@@ -72,13 +73,13 @@ end
 
 # reads a segemnt with given indices, or find ant transpose the existing one
 #if indices not sorted
-function readsegments{T <: AbstractFloat}(i::Array{Int}, bs::BoxStructure{T})
+function readsegments{T <: AbstractFloat, N}(i::Vector{Int}, bs::BoxStructure{T, N})
   sortidx = sortperm(i)
   permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
 end
 
 #gives the  number of boxes and the size of data stored in bs
-function size{T <: AbstractFloat}(bsdata::BoxStructure{T})
+function size{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N})
   segsize = bsdata.sizesegment
   numsegments = size(bsdata.frame, 1)
   numdata = segsize * (numsegments-1) + size(bsdata.frame[end].value, 1)
@@ -86,7 +87,7 @@ function size{T <: AbstractFloat}(bsdata::BoxStructure{T})
 end
 
 # tests if sizes on many bs are the same - for elementwise opertation on may bs
-function testsize{T <: AbstractFloat}(bsdata::BoxStructure{T}...)
+function testsize{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}...)
   for i = 2:size(bsdata,1)
     @inbounds size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
   end
@@ -158,10 +159,10 @@ function centre{T<:AbstractFloat}(data::Matrix{T})
 end
 
 # the single element of the block of N'th moment
-momentel{T <: AbstractFloat}(v::Array{T}...) = mean(mapreduce(i -> v[i], .*, 1:size(v,1)))
+momentel{T <: AbstractFloat}(v::Vector{T}...) = mean(mapreduce(i -> v[i], .*, 1:size(v,1)))
 
 # calculate n'th moment for the given segment
-function momentseg{T <: AbstractFloat}(r::Array{T, 2}...)
+function momentseg{T <: AbstractFloat}(r::Matrix{T}...)
     N = size(r, 1)
     dims = [map(i -> size(r[i], 2), 1:N)...]
     ret = zeros(T, dims...)
@@ -189,7 +190,7 @@ end
 #cumulants
 
 # split indices into given permutation of partitions
-function splitind(n::Array{Int,1}, pe::Array{Array{Int, 1},1})
+function splitind(n::Vector{Int}, pe::Vector{Vector{Int}})
     ret = similar(pe)
     for k = 1:size(pe,1)
         @inbounds ret[k] = [map(i -> n[pe[k][i]], 1:size(pe[k],1))...]
@@ -209,7 +210,7 @@ function addzeros{T <: AbstractFloat, N}(s::Int, imputbox::Array{T,N})
 end
 
 # calculates outer product of segments for given partition od indices
-function productseg{T <: AbstractFloat}(s::Int, N::Int, part::Array{Array{Int, 1},1}, c::Array{T}...)
+function productseg{T <: AbstractFloat}(s::Int, N::Int, part::Vector{Vector{Int}}, c::Array{T}...)
     ret = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
         ind = ind2sub((fill(s, N)...), i)
@@ -221,7 +222,7 @@ end
 
 # determines all permutations of [1,2,3, n] into given number of subsets
 #and which element of the bs list correspond to such permutation
-function partitionsind(s::Array{Int, 1}, ls::Array{Int, 1})
+function partitionsind(s::Vector{Int}, ls::Vector{Int})
     ind = 1:(cumsum(s)[end])
     ret = Array{Array{Int, 1}, 1}[]
     ret1 = Array{Int, 1}[]
@@ -235,7 +236,7 @@ function partitionsind(s::Array{Int, 1}, ls::Array{Int, 1})
 end
 
 #checks if all bloks in bs are squred and call the proper function
-function pbc{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
+function pbc{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
   s = size(bscum[1])
   if (s[1]*s[2] == s[3])
     return pbcsquare(part, bscum...)
@@ -245,14 +246,14 @@ function pbc{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
 end
 
 # calculates size type parameters given partition and sets of bs
-function partparameters{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
+function partparameters{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
   ls = map(i -> ndims(bscum[i].frame), 1:size(bscum, 1))
   cumsum(part)[end], size(bscum[1]), size(part, 1), partitionsind(part, ls)...
 end
 
 #calculates all outer products of bs for given subsets of indices e.g. 6 -> 2,4
 #provided all boxes in bs are squared
-function pbcsquare{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
+function pbcsquare{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
     N, s, n, p, indpart = partparameters(part, bscum...)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
     ind = indices(N, s[2])
@@ -270,16 +271,16 @@ function pbcsquare{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{
 end
 
 #as above, but assumes last boxes in bs are not squared
-function pbcnonsq{T <: AbstractFloat}(part::Array{Int, 1}, bscum::BoxStructure{T}...)
+function pbcnonsq{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
     N, s, n, p, indpart = partparameters(part, bscum...)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
     ind = indices(N, s[2])
-    block(i::Int, j::Int, pe::Array{Array{Int,1},1}) = bscum[indpart[j][i]].frame[pe[i]...].value
+    block(i::Int, j::Int, pe::Vector{Vector{Int}}) = bscum[indpart[j][i]].frame[pe[i]...].value
     for i in ind
       temp = zeros(T, fill(s[1], N)...)
       j = 1
       if (s[2] in i)
-        block(i::Int, j::Int,  pe::Array{Array{Int,1},1}) = addzeros(s[1], bscum[indpart[j][i]].frame[pe[i]...].value)
+        block(i::Int, j::Int,  pe::Vector{Vector{Int}}) = addzeros(s[1], bscum[indpart[j][i]].frame[pe[i]...].value)
       end
       for pk in p
           pe = splitind([i...], pk)
@@ -318,32 +319,16 @@ end
 
 #recursive formula
 function cumulants{T <: AbstractFloat}(n::Int, data::Matrix{T}, seg::Int = 2)
-    c2 = momentbc(data, 2, seg)
-    c3 = momentbc(data, 3, seg)
-    c4 = cumulantn(data, 4, seg, c2);
-    c5 = cumulantn(data, 5, seg, c2, c3);
-    c6 = cumulantn(data, 6, seg, c2, c3, c4);
-    if n <= 6
-      return c2, c3, c4, c5, c6
+    ret = Array(Any, n-1)
+    for i = 2:n
+      if i < 4
+        ret[i-1] = momentbc(data, i, seg)
+      else
+        ret[i-1] = cumulantn(data, i, seg, ret[1:(i-3)]...)
+      end
     end
-    c7 = cumulantn(data, 7, seg, c2, c3, c4, c5);
-    if n == 7
-      return c2, c3, c4, c5, c6, c7
-    end
-    c8 = cumulantn(data, 8, seg, c2, c3, c4, c5, c6);
-    if n == 8
-      return c2, c3, c4, c5, c6, c7, c8
-    end
-    c9 = cumulantn(data, 9, seg, c2, c3, c4, c5, c6, c7);
-    if n == 9
-      println(n)
-      return c2, c3, c4, c5, c6, c7, c8, c9
-    end
-    c10 = cumulantn(data, 10, seg, c2, c3, c4, c5, c6, c7, c8);
-    if n == 10
-      return c2, c3, c4, c5, c6, c7, c8, c9, c10
-    end
-end
+    (ret...)
+  end
 
 
 #some advanced opperations not used for cumulant calculation
@@ -506,5 +491,5 @@ end
 
 
 export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-bcssclass, indices, momentbc, centre, cumulants, productseg, pbc, partitionsind, productseg, cumulants1
+bcssclass, indices, momentbc, centre, cumulants, productseg, pbc, partitionsind, productseg
 end
