@@ -447,6 +447,7 @@ module Test
   end
   
   dat1 = centre(clcopulagen(15, 5))
+  dat2 = dat1[:,1:4]
  
   c = calculate_n_cumulants(dat1, 6)
   c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
@@ -457,6 +458,13 @@ module Test
   @test_approx_eq(convert(Array, c5),c["c5"])
   @test_approx_eq(convert(Array, c6),c["c6"])
   
+  c = calculate_n_cumulants(dat2, 6)
+  c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
   
+  @test_approx_eq(convert(Array, c2),c["c2"])
+  @test_approx_eq(convert(Array, c3),c["c3"])
+  @test_approx_eq(convert(Array, c4),c["c4"])
+  @test_approx_eq(convert(Array, c5),c["c5"])
+  @test_approx_eq(convert(Array, c6),c["c6"])
 
 end
