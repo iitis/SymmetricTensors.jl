@@ -1,6 +1,8 @@
-# moments
+# ---- following code is used to caclulate moments ----
 
-# centre data
+# centre data. Given data matrix centres each column,
+#substracts columnwise mean for all data in the column
+#performs centring foe each column, returns matrix
 function centre{T<:AbstractFloat}(data::Matrix{T})
     centred = zeros(data)
     n = size(data, 2)
@@ -25,7 +27,9 @@ function momentseg{T <: AbstractFloat}(r::Matrix{T}...)
     ret
 end
 
-# calculate n'th moment in the bs form
+# calculate N'th moment in the bs form
+#imput matrix of data, the order of the moemnt (N), number of degments for bs
+#returns N dimentional Box structure of N'th moment
 function momentbc{T <: AbstractFloat}(m::Matrix{T}, N::Int, segments::Int = 2)
     len = size(m,2)
     segsizetest(len, segments)
@@ -39,9 +43,12 @@ function momentbc{T <: AbstractFloat}(m::Matrix{T}, N::Int, segments::Int = 2)
     BoxStructure(ret)
 end
 
-#cumulants
+#--- following code is used to calculate cumulants ----
 
 # split indices into given permutation of partitions
+# imput: n , array of indices e.g. [i_1, i_2, i_3, i_4, i_5]
+# permutation of partitions represented by followign integers e.g. [[2,3],[1,4,5]]
+# output e.g. [[i_2 i_3][i_1 i_4 i_5]]
 function splitind(n::Vector{Int}, pe::Vector{Vector{Int}})
     ret = similar(pe)
     for k = 1:size(pe,1)
@@ -51,6 +58,8 @@ function splitind(n::Vector{Int}, pe::Vector{Vector{Int}})
 end
 
 #if box is notsquared makes it square by adding slices with zeros
+#imput the box array and reguired size
+#output N dimentional s x ...x s array
 function addzeros{T <: AbstractFloat, N}(s::Int, imputbox::Array{T,N})
     if !all(collect(size(imputbox)) .== s)
         ret = zeros(T, fill(s, N)...)
@@ -62,6 +71,9 @@ function addzeros{T <: AbstractFloat, N}(s::Int, imputbox::Array{T,N})
 end
 
 # calculates outer product of segments for given partition od indices
+#input s - size of segment, N - required number of dinsions of output, part - vector of partations (vectors of ints)
+# c - arrays of boxes
+#returns N dimentional array of size s x .... x s
 function productseg{T <: AbstractFloat}(s::Int, N::Int, part::Vector{Vector{Int}}, c::Array{T}...)
     ret = zeros(T, fill(s, N)...)
     for i = 1:(s^N)
@@ -72,7 +84,7 @@ function productseg{T <: AbstractFloat}(s::Int, N::Int, part::Vector{Vector{Int}
     ret
 end
 
-
+# sorts array of arrys of Ints according to the length of inner arrys
 sortpart(ls::Vector{Vector{Int}}) = ls[sortperm(map(length, ls))]
 
 # determines all permutations of [1,2,3, n] into given number of subsets
@@ -88,7 +100,9 @@ function partitionsind(part::Vector{Int})
     ret
 end
 
-#checks if all bloks in bs are squred and call the proper function
+#checks if all bloks in bs are squred and call the proper function that calculates mixed elements for the n'th cumulant
+#imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
+#output the porper outer product function
 function pbc{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
   s = size(bscum[1])
   if (s[1]*s[2] == s[3])
@@ -102,8 +116,9 @@ end
 partparameters{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...) = cumsum(part)[end], size(bscum[1]), size(part, 1), partitionsind(part)
 
 
-#calculates all outer products of bs for given subsets of indices e.g. 6 -> 2,4
-#provided all boxes in bs are squared
+#calculates the sum of all outer products of bs for given partitions of indices provided all boxes in bs are squared
+#imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
+#output the sum of all outer products in the bs form
 function pbcsquare{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
     N, s, n, p = partparameters(part, bscum...)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
@@ -120,7 +135,9 @@ function pbcsquare{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}
 end
 
 
-#as above, but assumes last boxes in bs are not squared
+#calculates the sum of all outer products of bs for given partitions of indices if not all boxes in bs are squared
+#imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
+#output the sum of all outer products in the bs form
 function pbcnonsq{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
     N, s, n, p = partparameters(part, bscum...)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
@@ -156,24 +173,29 @@ function findpart(n::Int)
     ret
 end
 
-# calculates n'th cumulant
-function cumulantn{T <: AbstractFloat}(m::Matrix{T}, n::Int, segments::Int, c::BoxStructure{T}...)
-      ret = momentbc(m, n, segments)
+# calculates n'th cumulant,
+#imput data - matrix of data, n - the order of the cumulant, segments - number of segments for bs
+# c - cumulants in the bs form orderred as follow c2, c3, ..., c(n-2)
+#returns the n order cumulant in the bs form
+function cumulantn{T <: AbstractFloat}(data::Matrix{T}, n::Int, segments::Int, c::BoxStructure{T}...)
+      ret = momentbc(data, n, segments)
       for p in findpart(n)
           ret -= pbc(p, c...)
       end
       ret
 end
 
-#recursive formula
-function cumulants{T <: AbstractFloat}(n::Int, data::Matrix{T}, seg::Int = 2)
+#recursive formula, calculate cumulants up to order n
+#imput: data - matrix of data, n - the maximal order of the cumulant, segments - number of segments for bs
+#output: cumulants in the bs form orderred as follow c2, c3, ..., cn
+function cumulants{T <: AbstractFloat}(n::Int, data::Matrix{T}, segments::Int = 2)
     data = centre(data)
     ret = Array(Any, n-1)
     for i = 2:n
       if i < 4
-        ret[i-1] = momentbc(data, i, seg)
+        ret[i-1] = momentbc(data, i, segments)
       else
-        ret[i-1] = cumulantn(data, i, seg, ret[1:(i-3)]...)
+        ret[i-1] = cumulantn(data, i, segments, ret[1:(i-3)]...)
       end
     end
     (ret...)
