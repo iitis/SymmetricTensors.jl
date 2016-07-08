@@ -115,8 +115,35 @@ end
 # calculates size type parameters given partition and sets of bs
 partparameters{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...) = cumsum(part)[end], size(bscum[1]), size(part, 1), partitionsind(part)
 
+# calculates sum of outer products at given multiindex and its partition
+# condition boxes at given multiindex are not square
+#imput p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
+# output the sum of outer products at given multiindex i and given partition
+function soopn{T <: AbstractFloat}(p::Vector{Vector{Vector{Int}}}, N::Int, n::Int, s::Tuple{Int64,Int64,Int64}, i::Vector{Int}, part::Vector{Int}, bscum::BoxStructure{T}...)
+  temp = zeros(T, fill(s[1], N)...)
+  for pk in p
+      pe = splitind([i...], pk)
+      @inbounds temp += productseg(s[1], N, pk, map(i -> addzeros(s[1], bscum[part[i]-1].frame[pe[i]...].value), 1:n)...)
+  end
+  range = map(k -> ((s[2] == i[k])? (1:(s[3]%s[1])) : (1:s[1])), 1:size(i,1))
+  temp[range...]
+end
 
-#calculates the sum of all outer products of bs for given partitions of indices provided all boxes in bs are squared
+# calculates sum of outer products at given multiindex and its partition
+# condition boxes at given multiindex are square
+#imput p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
+# output the sum of outer products at given multiindex i and given partition
+function soopsq{T <: AbstractFloat}(p::Vector{Vector{Vector{Int}}}, N::Int, n::Int, s::Tuple{Int64,Int64,Int64}, i::Vector{Int}, part::Vector{Int}, bscum::BoxStructure{T}...)
+    temp = zeros(T, fill(s[1], N)...)
+    for pk in p
+        pe = splitind([i...], pk)
+        @inbounds temp += productseg(s[1], N, pk, map(i -> bscum[part[i]-1].frame[pe[i]...].value, 1:n)...)
+    end
+    temp
+end
+
+#calculates the sum of all outer products at given partition of multiindex for all multiindexes for given bs
+# condition all boxes in bs are squared
 #imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
 #output the sum of all outer products in the bs form
 function pbcsquare{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
@@ -124,12 +151,7 @@ function pbcsquare{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
     ind = indices(N, s[2])
     for i in ind
-      temp = zeros(T, fill(s[1], N)...)
-      for pk in p
-          pe = splitind([i...], pk)
-          @inbounds temp += productseg(s[1], N, pk, map(i -> bscum[part[i]-1].frame[pe[i]...].value, 1:n)...)
-      end
-      @inbounds ret[i...] = temp
+      @inbounds ret[i...] = soopsq(p, N, n, s, i, part, bscum...)
     end
     BoxStructure(ret)
 end
@@ -142,25 +164,16 @@ function pbcnonsq{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}.
     N, s, n, p = partparameters(part, bscum...)
     ret = NullableArray(Array{T, N}, fill(s[2], N)...)
     ind = indices(N, s[2])
-    block(i::Int, pe::Vector{Vector{Int}}) = bscum[part[i]-1].frame[pe[i]...].value
     for i in ind
-      temp = zeros(T, fill(s[1], N)...)
       if (s[2] in i)
-        block(i::Int, pe::Vector{Vector{Int}}) = addzeros(s[1], bscum[part[i]-1].frame[pe[i]...].value)
-      end
-      for pk in p
-          pe = splitind([i...], pk)
-          @inbounds temp += productseg(s[1], N, pk, map(i -> block(i, pe), 1:n)...)
-      end
-      if !(s[2] in i)
-          @inbounds ret[i...] = temp
+        @inbounds ret[i...] = soopn(p, N, n, s, i, part, bscum...)
       else
-          range = map(k -> ((s[2] == i[k])? (1:(s[3]%s[1])) : (1:s[1])), 1:size(i,1))
-          @inbounds ret[i...] = temp[range...]
+        @inbounds ret[i...] = soopsq(p, N, n, s, i, part, bscum...)
       end
     end
     BoxStructure(ret)
 end
+
 
 # find all partitions of the order of cumulant into elements leq 2
 function findpart(n::Int)
@@ -200,4 +213,3 @@ function cumulants{T <: AbstractFloat}(n::Int, data::Matrix{T}, segments::Int = 
     end
     (ret...)
   end
-
