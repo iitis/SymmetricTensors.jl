@@ -1,15 +1,22 @@
 
-# test if the array is symmetric for a given tolerance
-function issymetric{T <: AbstractFloat}(data::Array{T}, atol::Float64 = 1e-7)
+""" tests if the array is symmetric for a given tolerance
+
+imput array, tolerance
+"""
+function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:ndims(data)
     (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(DimensionMismatch("array is not symmetric"))
   end
 end
 
-# test wether the last segment is not larger that the ordinary segment
+""" test wether the last segment of bs is not larger that an ordinary segment
+"""
 segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $len-segments*(len÷segments)) > segment len $(len÷segments)"))
 
-#examine if data can be stored in the bs form....
+"""examine if data can be stored in the bs form....
+
+search for expected exception
+"""
 function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
   fsize = size(frame, 1)
   all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
@@ -34,8 +41,13 @@ immutable BoxStructure{T <: AbstractFloat, S}
     end
 end
 
-#generates the set of sorted indices to run any operation on bs in a single loop.
-#todo moze da sie zrobic w tuplach
+"""generates the set of sorted indices to run any operation on bs in a single loop.
+
+imput N - number of dimentions, n - maximal index value
+
+Return Array of indices (ints)
+todo moze da sie zrobic w tuplach
+"""
 function indices(N::Int, n::Int)
     ret = Vector{Int}[]
     @eval begin
@@ -47,11 +59,20 @@ function indices(N::Int, n::Int)
     ret
 end
 
-#produces
+"""produces  set of indices for data in multidiemntional array
+to read them in segments to perform bs
+
+Return range
+"""
 seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit)
 
 
-#converts super-symmetric array into bs
+"""converts super-symmetric array into bs
+
+imput N dimentional Array
+
+Returns N dimentional bs
+"""
 function convert{T <: AbstractFloat, N}(::Type{BoxStructure}, data::Array{T, N}, segments::Int = 2)
   issymetric(data)
   len = size(data,1)
@@ -66,14 +87,23 @@ function convert{T <: AbstractFloat, N}(::Type{BoxStructure}, data::Array{T, N},
   BoxStructure(ret)
 end
 
-# reads a segemnt with given indices, or find ant transpose the existing one
-#if indices not sorted
+""" reads a segemnt with given multiindex,
+if multiindex not sorted, find segment with sorted once and performs
+  required permutation od fims
+
+returns N dimentional Array
+"""
 function readsegments{T <: AbstractFloat, N}(i::Vector{Int}, bs::BoxStructure{T, N})
   sortidx = sortperm(i)
   permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
 end
 
-#gives the  number of boxes and the size of data stored in bs
+"""gives the  number of boxes and the size of data stored in bs
+
+Imput bs
+
+Return Tuple of Ints
+"""
 function size{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N})
   segsize = bsdata.sizesegment
   numsegments = size(bsdata.frame, 1)
@@ -81,14 +111,16 @@ function size{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N})
   segsize, numsegments, numdata
 end
 
-# tests if sizes on many bs are the same - for elementwise opertation on may bs
+"""tests if sizes on many bs are the same - for elementwise opertation on may bs
+"""
 function testsize{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}...)
   for i = 2:size(bsdata,1)
     @inbounds size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
   end
 end
 
-# converts BS into Array
+""" converts bs into Array
+"""
 function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
   s = size(bsdata)
   ret = zeros(T, fill(s[3], N)...)
@@ -100,7 +132,12 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
   ret
 end
 
-#elementwise opertation on many bs
+"""elementwise opertation on many bs
+
+imput many bs of the same size
+
+Returns single bs of the size of imput bs
+"""
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}...)
   n = size(bsdata, 1)
   (n > 1)? testsize(bsdata...):()
@@ -112,7 +149,12 @@ function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}
   BoxStructure(ret)
 end
 
-#elementwise opertation on bs and given number
+"""elementwise opertation on bs and number
+
+imput bs and number (Real)
+
+Returns single bs of the size of imput bs
+"""
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}, a::Real)
   ret = similar(bsdata.frame)
   ind = indices(N, size(bsdata.frame, 1))
@@ -122,7 +164,12 @@ function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}
   BoxStructure(ret)
 end
 
-#elementwise opertation that changes the calue of the bs (for discussion purpose)
+"""elementwise opertation that changes the value of the bs (the f!() function )
+
+imput bs and number (Real)
+
+Returns single bs of the size of imput bs
+"""
 function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
       ind = indices(N, size(bsdata.frame, 1))
       for i in ind
@@ -130,17 +177,25 @@ function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, o
       end
 end
 
-# simple operations on bs structure
+# implements simple operations on bs structure
+
+"""
+elementwise operations on 2 bses
+"""
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
 end
 
+"""
+elementwise operations on bs and number
+"""
 for op = (:+, :-, :*, :/)
   @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
 end
 
+"""
+add function that changes the imput data f!() type
+
+imput bs data to which a number is added elementwisely
+"""
 add{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation!(bsdata, +, n)
-
-
-
-
