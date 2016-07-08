@@ -1,3 +1,2 @@
-
-include("test/Test.jl")
 include("src/Boxtensors.jl")
+include("test/Test.jl")

@@ -179,22 +179,17 @@ end
 
 # implements simple operations on bs structure
 
-"""
-elementwise operations on 2 bses
-"""
+
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
 end
 
-"""
-elementwise operations on bs and number
-"""
+
 for op = (:+, :-, :*, :/)
   @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
 end
 
-"""
-add function that changes the imput data f!() type
+"""add function that changes the imput data f!() type
 
 imput bs data to which a number is added elementwisely
 """
