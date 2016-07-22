@@ -1,7 +1,7 @@
 
 """ tests if the array is symmetric for a given tolerance
 
-imput array, tolerance
+input array, tolerance
 """
 function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:ndims(data)
@@ -11,7 +11,7 @@ end
 
 """ test wether the last segment of bs is not larger that an ordinary segment
 """
-segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $len-segments*(len÷segments)) > segment len $(len÷segments)"))
+segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $(len-segments*(len÷segments)) > segment len $(len÷segments)"))
 
 """examine if data can be stored in the bs form....
 
@@ -22,9 +22,12 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
   not_nulls = !frame.isnull
   !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
-  quote
-    @nloops $S i x->x==$S ? 1:fsize : i_{x+1}:fsize begin
-      @inbounds minimum(size($frame[i].value)) .== size($frame[i].value, 1) || throw(DimensionMismatch("[$i ] block not square"))
+  @eval begin
+    @nloops $S i x->x==$S ? 1:$fsize : i_{x+1}:$fsize begin
+      ii = collect(@ntuple $S i)
+      println(ii)
+      println($frame[ii...])
+      # @inbounds minimum(size($frame[ii...])) .== size($frame[ii...], 1) || throw(DimensionMismatch("[$ii ] block not square"))
     end
   end
   for i=1:fsize
