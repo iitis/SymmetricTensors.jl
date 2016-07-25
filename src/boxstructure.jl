@@ -22,14 +22,12 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
   not_nulls = !frame.isnull
   !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
-  @eval begin
-    @nloops $S i x->x==$S ? 1:$fsize : i_{x+1}:$fsize begin
-      ii = collect(@ntuple $S i)
-      println(ii)
-      println($frame[ii...])
-      # @inbounds minimum(size($frame[ii...])) .== size($frame[ii...], 1) || throw(DimensionMismatch("[$ii ] block not square"))
-    end
-  end
+  # @eval begin
+  #   @nloops $S i x->x==$S ? 1:$fsize : i_{x+1}:$fsize begin
+  #     ii = @ntuple $S i
+  #     @inbounds minimum(size($frame[ii...].value)) .== size($frame[ii...].value, 1) || throw(DimensionMismatch("[$ii ] block not square"))
+  #   end
+  # end
   for i=1:fsize
     @inbounds issymetric(frame[fill(i, S)...].value)
   end
