@@ -24,7 +24,7 @@ module Test
       rmat, symmetrise(rmat), convert(BoxStructure, symmetrise(rmat), seg), rand(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
    end
 
-   function createsegments(randarray, nonullel::Bool = false, s1::Int = 4)
+   function createsegments(randarray, nonullel::Bool = false,  s1::Int = 4, addnonosymmbox::Bool = false)
    dims = ndims(randarray)
       structure = NullableArray(Array{Float64, dims}, fill(s1, dims)...)
       for i in product(fill(1:s1, dims)...)
@@ -32,6 +32,9 @@ module Test
       end
       if nonullel
 	structure[reverse(collect(1:dims))...] = randarray
+      end
+      if addnonosymmbox
+	structure[fill(1, dims-1)..., 2] = randarray[1:2,:]
       end
       structure
   end

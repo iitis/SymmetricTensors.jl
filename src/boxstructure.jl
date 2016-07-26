@@ -13,38 +13,9 @@ end
 """
 segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $(len-segments*(len÷segments)) > segment len $(len÷segments)"))
 
-"""examine if data can be stored in the bs form....
-
-search for expected exception
-"""
-function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
-  fsize = size(frame, 1)
-  all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
-  not_nulls = !frame.isnull
-  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
-  # @eval begin
-  #   @nloops $S i x->x==$S ? 1:$fsize : i_{x+1}:$fsize begin
-  #     ii = @ntuple $S i
-  #     @inbounds minimum(size($frame[ii...].value)) .== size($frame[ii...].value, 1) || throw(DimensionMismatch("[$ii ] block not square"))
-  #   end
-  # end
-  for i=1:fsize
-    @inbounds issymetric(frame[fill(i, S)...].value)
-  end
-end
-
-immutable BoxStructure{T <: AbstractFloat, S}
-    frame::NullableArrays.NullableArray{Array{T,S},S}
-    sizesegment::Int
-    function call{T, S}(::Type{BoxStructure}, frame::NullableArrays.NullableArray{Array{T,S},S})
-        structfeatures(frame)
-        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
-    end
-end
-
 """generates the set of sorted indices to run any operation on bs in a single loop.
 
-imput N - number of dimentions, n - maximal index value
+input N - number of dimentions, n - maximal index value
 
 Return Array of indices (ints)
 todo moze da sie zrobic w tuplach
@@ -60,6 +31,33 @@ function indices(N::Int, n::Int)
     ret
 end
 
+"""examine if data can be stored in the bs form....
+
+search for expected exception
+"""
+function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
+  fsize = size(frame, 1)
+  all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
+  not_nulls = !frame.isnull
+  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
+  for i in indices(S, fsize-1)
+    @inbounds minimum(size(frame[i...].value)) .== size(frame[i...].value, 1) || throw(DimensionMismatch("[$i ] block not square"))
+  end
+  for i=1:fsize
+    @inbounds issymetric(frame[fill(i, S)...].value)
+  end
+end
+
+immutable BoxStructure{T <: AbstractFloat, S}
+    frame::NullableArrays.NullableArray{Array{T,S},S}
+    sizesegment::Int
+    function call{T, S}(::Type{BoxStructure}, frame::NullableArrays.NullableArray{Array{T,S},S})
+        structfeatures(frame)
+        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
+    end
+end
+
+
 """produces  set of indices for data in multidiemntional array
 to read them in segments to perform bs
 
@@ -70,7 +68,7 @@ seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit
 
 """converts super-symmetric array into bs
 
-imput N dimentional Array
+input N dimentional Array
 
 Returns N dimentional bs
 """
@@ -101,7 +99,7 @@ end
 
 """gives the  number of boxes and the size of data stored in bs
 
-Imput bs
+input bs
 
 Return Tuple of Ints
 """
@@ -135,9 +133,9 @@ end
 
 """elementwise opertation on many bs
 
-imput many bs of the same size
+input many bs of the same size
 
-Returns single bs of the size of imput bs
+Returns single bs of the size of input bs
 """
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}...)
   n = size(bsdata, 1)
@@ -152,9 +150,9 @@ end
 
 """elementwise opertation on bs and number
 
-imput bs and number (Real)
+input bs and number (Real)
 
-Returns single bs of the size of imput bs
+Returns single bs of the size of input bs
 """
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}, a::Real)
   ret = similar(bsdata.frame)
@@ -167,9 +165,9 @@ end
 
 """elementwise opertation that changes the value of the bs (the f!() function )
 
-imput bs and number (Real)
+input bs and number (Real)
 
-Returns single bs of the size of imput bs
+Returns single bs of the size of input bs
 """
 function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
       ind = indices(N, size(bsdata.frame, 1))
@@ -190,8 +188,8 @@ for op = (:+, :-, :*, :/)
   @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
 end
 
-"""add function that changes the imput data f!() type
+"""add function that changes the input data f!() type
 
-imput bs data to which a number is added elementwisely
+input bs data to which a number is added elementwisely
 """
 add{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation!(bsdata, +, n)

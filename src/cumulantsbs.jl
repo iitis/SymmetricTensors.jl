@@ -17,7 +17,7 @@ end
 
 """ calculates the single element of the block of N'th moment
 
-imput vectors that corresponds to given column of data
+input vectors that corresponds to given column of data
 
 Returns Float64 (an element of the block)
 """
@@ -25,7 +25,7 @@ momentel{T <: AbstractFloat}(v::Vector{T}...) = mean(mapreduce(i -> v[i], .*, 1:
 
 """calculate n'th moment for the given segment
 
-imput r - matrices of data
+input r - matrices of data
 
 Returns N dimentional array (segment)
 """
@@ -42,7 +42,7 @@ end
 
 """ calculate N'th moment in the bs form
 
-imput matrix of data, the order of the moment (N), number of segments for bs
+input matrix of data, the order of the moment (N), number of segments for bs
 
 Returns N dimentional Box structure of N'th moment
 """
@@ -63,7 +63,7 @@ end
 
 """split indices into given permutation of partitions
 
-imput: n , array of indices e.g. [i_1, i_2, i_3, i_4, i_5]
+input: n , array of indices e.g. [i_1, i_2, i_3, i_4, i_5]
 permutation of partitions represented by followign integers e.g. [[2,3],[1,4,5]]
 
 Returns output e.g. [[i_2 i_3][i_1 i_4 i_5]]
@@ -78,18 +78,18 @@ end
 
 """if box is notsquared makes it square by adding slices with zeros
 
-imput the box array and reguired size
+input the box array and reguired size
 
 Returns N dimentional s x ...x s array
 """
-function addzeros{T <: AbstractFloat, N}(s::Int, imputbox::Array{T,N})
-    if !all(collect(size(imputbox)) .== s)
+function addzeros{T <: AbstractFloat, N}(s::Int, inputbox::Array{T,N})
+    if !all(collect(size(inputbox)) .== s)
         ret = zeros(T, fill(s, N)...)
-        ind = map(k -> 1:size(imputbox,k), 1:N)
-        ret[ind...] = imputbox
+        ind = map(k -> 1:size(inputbox,k), 1:N)
+        ret[ind...] = inputbox
         return ret
     end
-    imputbox
+    inputbox
 end
 
 """calculates outer product of segments for given partition od indices
@@ -130,7 +130,7 @@ end
 
 """checks if all bloks in bs are squred and call the proper function that calculates mixed elements for the n'th cumulant
 
-imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
+input part - a vector of partitions, bscum - cumulants of order 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
 
 Returns the porper outer product function
 """
@@ -150,7 +150,7 @@ sizes(part::Vector{Int}) = cumsum(part)[end], size(part, 1)
 """ calculates sum of outer products at given multiindex and its partition
  condition boxes at given multiindex are not square
 
-imput p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
+input p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
 
 Returns the sum of outer products at given multiindex i and given partition
 """
@@ -168,7 +168,7 @@ end
 """ calculates sum of outer products at given multiindex and its partition
  condition boxes at given multiindex are square
 
-imput p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
+input p - particular partition, i - multiindex, bscumm - set od cumulants in bs structure
 
 Returns the sum of outer products at given multiindex i and given partition
 """
@@ -185,7 +185,7 @@ end
 """calculates the sum of all outer products at given partition of multiindex
 for all multiindexes for given bs condition all boxes in bs are squared
 
-imput part - a vector of partitions, bscum - cumulants of order 2 - (n-2)
+input part - a vector of partitions, bscum - cumulants of order 2 - (n-2)
 in bs form in the following order c2, c3, ..., c(n-2)
 
 Returns the sum of all outer products in the bs form
@@ -205,7 +205,7 @@ end
 """calculates the sum of all outer products of bs for given partitions of
 indices if not all boxes in bs are squared
 
-imput: part - a vector of partitions, bscum - cumulants of order
+input: part - a vector of partitions, bscum - cumulants of order
 2 - (n-2) in bs form in the following order c2, c3, ..., c(n-2)
 
 Returns the sum of all outer products in the bs form """
@@ -239,7 +239,7 @@ end
 
 """calculates n'th cumulant,
 
-imput data - matrix of data, n - the order of the cumulant, segments - number of segments for bs
+input data - matrix of data, n - the order of the cumulant, segments - number of segments for bs
 c - cumulants in the bs form orderred as follow c2, c3, ..., c(n-2)
 
 Returns the n order cumulant in the bs form"""
@@ -253,7 +253,7 @@ end
 
 """recursive formula, calculate cumulants up to order n
 
-imput: data - matrix of data, n - the maximal order of the cumulant, segments - number of segments for bs
+input: data - matrix of data, n - the maximal order of the cumulant, segments - number of segments for bs
 
 Returns cumulants in the bs form orderred as follow c2, c3, ..., cn
 works for any n >= 2, tested up to n = 10, in automatic tests up to n = 6 (limit due to the increasement
