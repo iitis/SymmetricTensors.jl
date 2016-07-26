@@ -8,15 +8,15 @@ module Test
   importall Boxtensors
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
-  
- 
+
+
   rmat = symmetrise(randn(6,6))
   converttest = convert(BoxStructure, rmat)
   @test_approx_eq(converttest.frame[1,1].value, rmat[1:3, 1:3])
   @test_approx_eq(converttest.frame[1,2].value, rmat[1:3, 4:6])
   @test_approx_eq(converttest.frame[2,2].value, rmat[4:6, 4:6])
   @test(isnull(converttest.frame[2,1]))
-  
+
 
   function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 6, l::Int = 1000)
       srand(seed)
@@ -180,13 +180,13 @@ module Test
     @test_approx_eq(convert(Array, bcssclass(bstensor, m[1:6, 1:10], 3)), multimodemult(stensor, m[1:6, 1:10]))
     @test_approx_eq(convert(Array, bcssclass(bstensor, m[1:7, 1:10], 3)), multimodemult(stensor, m[1:7, 1:10]))
     @test_approx_eq_eps(sum(abs(mean(centre(m[1:3, 1:10]), 1))), 0, 1e-15)
-    
+
   #rests moments via semi naive algorithms
   dat = centre(data[1:15,1:5])
   @test_approx_eq(convert(Array, momentbc(dat, 3, 2)), moment3(dat))
   @test_approx_eq(convert(Array, momentbc(dat, 4, 2)), moment4(dat))
-  
-  # kopula Claytona rozklady brzegowe Weibulla  
+
+  # kopula Claytona rozklady brzegowe Weibulla
   function clcopulatest(t::Int, m::Int)
     theta = 1.02
     coredist = Gamma(1,1/theta)
@@ -202,11 +202,11 @@ module Test
     end
     ret
   end
-  
+
   dat1 = clcopulatest(10, 5)
   dat2 = dat1[:,1:4]
   dat3 = dat1[:,1:2]
-  
+
   #test of semi naive algorithm using fd
   #warnings in tests from forward diff, but it works
   csm = snaivecumulant(dat3, 6)
@@ -217,7 +217,7 @@ module Test
   @test_approx_eq(cfd[5],csm["c5"])
   @test_approx_eq(cfd[6],csm["c6"])
   #@test_approx_eq(cfd[7],csm["c7"])
-  
+
   # test the bs algorithm using the semi naive (for non square last block)
   c = snaivecumulant(dat1, 6)
   c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
@@ -227,7 +227,7 @@ module Test
   @test_approx_eq(convert(Array, c5),c["c5"])
   @test_approx_eq(convert(Array, c6),c["c6"])
  # @test_approx_eq(convert(Array, c7),c["c7"])
- 
+
  # for square last block
   c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
   @test_approx_eq(convert(Array, c2),c["c2"][fill(1:4, 2)...])
