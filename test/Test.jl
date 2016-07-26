@@ -34,7 +34,7 @@ module Test
 	structure[reverse(collect(1:dims))...] = randarray
       end
       if addnonosymmbox
-	structure[fill(1, dims-1)..., 2] = randarray[1:2,:]
+	structure[fill(1, dims-1)...,2] = randarray[1:2,:]
       end
       structure
   end
@@ -79,15 +79,15 @@ module Test
     @test_approx_eq(convert(Array, covbs(Matrix{Float32}(data), smseg.sizesegment, false)), cov(Matrix{Float32}(data), corrected=false))
     @test_approx_eq(convert(Array,covbs(data, smseg.sizesegment, true)), cov(data, corrected=true))
 
-    @test_throws(DimensionMismatch, convert(BoxStructure, m, 5))
+    @test_throws(AssertionError, convert(BoxStructure, m, 5))
     @test_throws(DimensionMismatch, convert(BoxStructure, sm[:,1:15], 5))
     @test_throws(DimensionMismatch, convert(BoxStructure, sm,  badsegments))
     @test_throws(MethodError, convert(BoxStructure, boolean, 5))
     @test_throws(MethodError, convert(BoxStructure, comlx, 5))
-    @test_throws(DimensionMismatch, BoxStructure(smseg.frame[:,1:2]))
-    @test_throws(DimensionMismatch, BoxStructure(createsegments(sm[:,1:2])))
-    @test_throws(DimensionMismatch, BoxStructure(createsegments(m)))
-    @test_throws(ArgumentError, BoxStructure(createsegments(sm, true)))
+    @test_throws(AssertionError, BoxStructure(smseg.frame[:,1:2]))
+    @test_throws(AssertionError, BoxStructure(createsegments(sm[:,1:2], false)))
+    @test_throws(AssertionError, BoxStructure(createsegments(m)))
+    @test_throws(AssertionError, BoxStructure(createsegments(sm, true)))
     @test_throws(DimensionMismatch, smseg*smseg1)
     @test_throws(DimensionMismatch, smseg+smseg1)
     @test_throws(DimensionMismatch, smseg.*smseg1)
@@ -160,10 +160,10 @@ module Test
     @test_throws(DimensionMismatch, bstensor.*bstensor2)
     @test_throws(DimensionMismatch, bstensor+bstensor3)
     @test_throws(DimensionMismatch, bstensor.*bstensor3)
-    @test_throws(DimensionMismatch, BoxStructure(bstensor.frame[:,:,:,1:2]))
-    @test_throws(DimensionMismatch, BoxStructure(createsegments(randtensor(Float64, 4, 10))))
-    @test_throws(DimensionMismatch, BoxStructure(createsegments(stensor[:,:,:,1:2])))
-    @test_throws(ArgumentError, BoxStructure(createsegments(stensor, true)))
+    @test_throws(AssertionError, BoxStructure(bstensor.frame[:,:,:,1:2]))
+    @test_throws(AssertionError, BoxStructure(createsegments(randtensor(Float64, 4, 10))))
+    @test_throws(AssertionError, BoxStructure(createsegments(stensor[:,:,:,1:2])))
+    @test_throws(AssertionError, BoxStructure(createsegments(stensor, true)))
     @test_throws(DimensionMismatch, convert(BoxStructure, stensor,  badsegments))
     @test_throws(MethodError, convert(BoxStructure, randtensor(Bool, 4, 10), 3))
     @test_throws(MethodError, convert(BoxStructure, randtensor(Complex64, 4, 10), 3))

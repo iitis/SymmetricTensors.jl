@@ -5,7 +5,7 @@ input array, tolerance
 """
 function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:ndims(data)
-    (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(DimensionMismatch("array is not symmetric"))
+    (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
   end
 end
 
@@ -37,11 +37,11 @@ search for expected exception
 """
 function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
   fsize = size(frame, 1)
-  all(collect(size(frame)) .== fsize) || throw(DimensionMismatch("frame not square"))
+  all(collect(size(frame)) .== fsize) || throw(AssertionError("frame not square"))
   not_nulls = !frame.isnull
-  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(ArgumentError("underdiagonal block not null"))
+  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(AssertionError("underdiagonal block not null"))
   for i in indices(S, fsize-1)
-    @inbounds minimum(size(frame[i...].value)) .== size(frame[i...].value, 1) || throw(DimensionMismatch("[$i ] block not square"))
+    @inbounds minimum(size(frame[i...].value)) .== size(frame[i...].value, 1) || throw(AssertionError("[$i ] block not square"))
   end
   for i=1:fsize
     @inbounds issymetric(frame[fill(i, S)...].value)
