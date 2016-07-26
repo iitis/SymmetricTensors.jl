@@ -18,7 +18,7 @@ module Test
   @test(isnull(converttest.frame[2,1]))
   
 
-  function generatedata(seed::Int = 1234, n::Int = 20, seg::Int = 6, l::Int = 1000)
+  function generatedata(seed::Int = 1234, n::Int = 15, seg::Int = 4, l::Int = 1000)
       srand(seed)
       rmat = randn(n,n)
       rmat, symmetrise(rmat), convert(BoxStructure, symmetrise(rmat), seg), rand(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
@@ -42,7 +42,7 @@ module Test
     m, sm, smseg, data, boolean, comlx = generatedata()
     smseg1 = convert(BoxStructure, sm, 2)
     m2, sm2, smseg2 = generatedata(1233)
-    badsegments = 7
+    badsegments = 8
 
     @test_approx_eq(convert(Array, smseg), sm)
     @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
@@ -78,14 +78,14 @@ module Test
     @test_approx_eq(convert(Array,covbs(data, smseg.sizesegment, false)), cov(data, corrected=false))
     @test_approx_eq(convert(Array, covbs(Matrix{Float32}(data), smseg.sizesegment, false)), cov(Matrix{Float32}(data), corrected=false))
     @test_approx_eq(convert(Array,covbs(data, smseg.sizesegment, true)), cov(data, corrected=true))
-
+    
     @test_throws(AssertionError, convert(BoxStructure, m, 5))
-    @test_throws(DimensionMismatch, convert(BoxStructure, sm[:,1:15], 5))
+    @test_throws(DimensionMismatch, convert(BoxStructure, sm[:,1:13], 6))
     @test_throws(DimensionMismatch, convert(BoxStructure, sm,  badsegments))
     @test_throws(MethodError, convert(BoxStructure, boolean, 5))
     @test_throws(MethodError, convert(BoxStructure, comlx, 5))
     @test_throws(AssertionError, BoxStructure(smseg.frame[:,1:2]))
-    @test_throws(AssertionError, BoxStructure(createsegments(sm[:,1:2], false)))
+    @test_throws(AssertionError, BoxStructure(createsegments(sm, false, 4, true)))
     @test_throws(AssertionError, BoxStructure(createsegments(m)))
     @test_throws(AssertionError, BoxStructure(createsegments(sm, true)))
     @test_throws(DimensionMismatch, smseg*smseg1)
@@ -162,7 +162,7 @@ module Test
     @test_throws(DimensionMismatch, bstensor.*bstensor3)
     @test_throws(AssertionError, BoxStructure(bstensor.frame[:,:,:,1:2]))
     @test_throws(AssertionError, BoxStructure(createsegments(randtensor(Float64, 4, 10))))
-    @test_throws(AssertionError, BoxStructure(createsegments(stensor[:,:,:,1:2])))
+    @test_throws(AssertionError, BoxStructure(createsegments(sm, false, 4, true)))
     @test_throws(AssertionError, BoxStructure(createsegments(stensor, true)))
     @test_throws(DimensionMismatch, convert(BoxStructure, stensor,  badsegments))
     @test_throws(MethodError, convert(BoxStructure, randtensor(Bool, 4, 10), 3))

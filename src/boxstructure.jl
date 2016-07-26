@@ -41,7 +41,7 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   not_nulls = !frame.isnull
   !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(AssertionError("underdiagonal block not null"))
   for i in indices(S, fsize-1)
-    @inbounds minimum(size(frame[i...].value)) .== size(frame[i...].value, 1) || throw(AssertionError("[$i ] block not square"))
+    @inbounds all(collect(size(frame[i...].value)) .== size(frame[i...].value, 1)) || throw(AssertionError("[$i ] block not square"))
   end
   for i=1:fsize
     @inbounds issymetric(frame[fill(i, S)...].value)
