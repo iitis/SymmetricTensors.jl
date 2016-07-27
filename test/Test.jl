@@ -183,8 +183,8 @@ module Test
 
   #rests moments via semi naive algorithms
   dat = centre(data[1:15,1:5])
-  @test_approx_eq(convert(Array, momentbc(dat, 3, 2)), moment3(dat))
-  @test_approx_eq(convert(Array, momentbc(dat, 4, 2)), moment4(dat))
+  @test_approx_eq(convert(Array, momentbs(dat, 3, 2)), moment3(dat))
+  @test_approx_eq(convert(Array, momentbs(dat, 4, 2)), moment4(dat))
 
   # kopula Claytona rozklady brzegowe Weibulla
   function clcopulatest(t::Int, m::Int)

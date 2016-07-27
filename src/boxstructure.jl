@@ -80,7 +80,7 @@ function convert{T <: AbstractFloat, N}(::Type{BoxStructure}, data::Array{T, N},
   ret = NullableArray(Array{T, N}, fill(segments, N)...)
     ind = indices(N, segments)
     for writeind in ind
-        readind = (map(k::Int -> seg(k, ceil(Int, len/segments), len), writeind)...)
+        readind = map(k::Int -> seg(k, ceil(Int, len/segments), len), writeind)
         @inbounds ret[writeind...] = data[readind...]
     end
   BoxStructure(ret)
@@ -92,7 +92,7 @@ if multiindex not sorted, find segment with sorted once and performs
 
 returns N dimentional Array
 """
-function readsegments{T <: AbstractFloat, N}(i::Vector{Int}, bs::BoxStructure{T, N})
+function readsegments(i::Vector{Int}, bs::BoxStructure)
   sortidx = sortperm(i)
   permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
 end
@@ -125,7 +125,7 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
   ret = zeros(T, fill(s[3], N)...)
     for i = 1:(s[2]^N)
         readind = ind2sub((fill(s[2], N)...), i)
-        writeind = (map(k -> seg(readind[k], s[1], s[3]), 1:N)...)
+        writeind = map(k -> seg(readind[k], s[1], s[3]), 1:N)
         @inbounds ret[writeind...] = readsegments(collect(readind), bsdata)
       end
   ret
@@ -163,18 +163,7 @@ function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}
   BoxStructure(ret)
 end
 
-"""elementwise opertation that changes the value of the bs (the f!() function )
-
-input bs and number (Real)
-
-Returns single bs of the size of input bs
-"""
-function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
-      ind = indices(N, size(bsdata.frame, 1))
-      for i in ind
-        @inbounds bsdata.frame[i...] = op(bsdata.frame[i...].value, n)
-      end
-end
+operation(op::Function, a::Real, bsdata::BoxStructure) = operation(op, bsdata, a)
 
 # implements simple operations on bs structure
 
@@ -188,8 +177,6 @@ for op = (:+, :-, :*, :/)
   @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
 end
 
-"""add function that changes the input data f!() type
-
-input bs data to which a number is added elementwisely
-"""
-add{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation!(bsdata, +, n)
+for op = (:+, :*)
+  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, bsdata::BoxStructure{T})  = operation($op, bsdata, n)
+end

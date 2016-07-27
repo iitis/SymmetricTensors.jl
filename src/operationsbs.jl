@@ -157,3 +157,21 @@ function convertlim{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N
 end
 
 
+"""elementwise opertation that changes the value of the bs (the f!() function )
+
+input bs and number (Real)
+
+Returns single bs of the size of input bs
+"""
+function operation!{T<: AbstractFloat,N, S <: Real}(bsdata::BoxStructure{T,N}, op::Function, n::S)
+      ind = indices(N, size(bsdata.frame, 1))
+      for i in ind
+        @inbounds bsdata.frame[i...] = op(bsdata.frame[i...].value, n)
+      end
+end
+
+"""add function that changes the input data f!() type
+
+input bs data to which a number is added elementwisely
+"""
+add{T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation!(bsdata, +, n)
