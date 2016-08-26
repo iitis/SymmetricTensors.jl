@@ -4,13 +4,12 @@ mixedelements{T<:AbstractFloat}(A::Vector{T},B::Vector{T},C::Vector{T},D::Vector
 cumulantelement{T<:AbstractFloat}(A::Vector{T}, B::Vector{T}, C::Vector{T}, D::Vector{T}) = mean(A.*B.*C.*D) + mixedelements(A,B,C,D)
 
 function mixedelements{T<:AbstractFloat}(A::Vector{T},B::Vector{T},C::Vector{T},D::Vector{T},E::Vector{T})
-  -mean(A.*B.*C)*mean(D.*E) - mean(A.*B.*D)*mean(C.*E) - mean(A.*B.*E)*mean(D.*C)- mean(D.*B.*C)*mean(A.*E)- mean(E.*B.*C)*mean(D.*A)
-  -mean(A.*D.*C)*mean(B.*E) -mean(A.*E.*C)*mean(B.*E)- mean(D.*E.*C)*mean(A.*B)- mean(D.*B.*E)*mean(A.*C)-mean(A.*D.*E)*mean(A.*B)
+  -mean(A.*B.*C)*mean(D.*E) - mean(A.*B.*D)*mean(C.*E) - mean(A.*B.*E)*mean(D.*C)- mean(D.*B.*C)*mean(A.*E)- mean(E.*B.*C)*mean(D.*A) -mean(A.*D.*C)*mean(B.*E) -mean(A.*E.*C)*mean(B.*D)- mean(D.*E.*C)*mean(A.*B)- mean(D.*B.*E)*mean(A.*C)-mean(A.*D.*E)*mean(C.*B)
 end
 
 cumulantelement{T<:AbstractFloat}(A::Vector{T}, B::Vector{T}, C::Vector{T}, D::Vector{T}, E::Vector{T}) = mean(A.*B.*C.*D.*E) + mixedelements(A,B,C,D,E)
 
-function naivecumulant{T<:AbstractFloat}(data::Matrix{T}, oreder::Int = 4)
+function naivecumulant{T<:AbstractFloat}(data::Matrix{T}, order::Int = 4)
     data = centre(data)
     n = size(data, 2)
     ret = zeros(T, fill(n, order)...)
