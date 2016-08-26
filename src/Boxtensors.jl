@@ -17,12 +17,10 @@ module Boxtensors
   #generates random multivariate data sung copulas
   include("copulagen.jl")
 
-  #algorithms for tests
-  #.....................
-  include("seminaivecum.jl") #semi naive algorithm (using tensor networks, not using box structure)
-  include("fdcumulants.jl") #forwarddiff using definition
+  #naive algorithms for computation time tests
+  include("seminaivecum.jl")
 
 
   export BoxStructure, convert, +, -, *, /, add, trace, vec, vecnorm, covbs, modemult, square, bcss,
-  bcssclass, momentbs, centre, cumulants, clcopulagen, snaivecumulant, get_diff, moment3, moment4, pbc
+  bcssclass, momentbs, centre, cumulants, clcopulagen, pbc, naivecumulant
 end
