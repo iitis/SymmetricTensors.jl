@@ -7,30 +7,46 @@ module Test
   using Distributions
   using ForwardDiff
   importall Boxtensors
+  import Base: gradient
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
 
-  function get_diff{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
+  function cumulantsfd1{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
+    fgen2(p) = ForwardDiff.hessian(t -> log(mean(exp(t'*dane'))), p)
+    nthcumgen(gen_funct, p) = ForwardDiff.jacobian(x -> vec(gen_funct(x)), p)
+
     n = size(dane, 2)
-    f(t::Vector) = log(mean(exp(t'*dane')))
     t_vec = zeros(Float64, n)
-    fgen1 = ForwardDiff.gradient(f)
-    fgen2 = hessian(f)
-    fgen3 = tensor(f)
-    function nthcumgen(gen_funct)
-        vecform(x) = vec(gen_funct(x::Vector))
-        jacobian(vecform)
-    end
-    tensor_form(mat::Matrix, size::Int, modes::Int) = reshape(mat,fill(size,modes)...)
-    fgen = fgen3
+    tensor_form(mat::Matrix, s::Int, m::Int) = reshape(mat,fill(s,m)...)
     ret = Any[]
-    for modes = 4:r
-        fgen = nthcumgen(fgen)
-        fn = tensor_form(fgen(t_vec),n, modes)
-        push!(ret, fn)
+    push!(ret, fgen2(t_vec))
+    fgen(p) = fgen2(p)
+    for modes = 3:r
+        fgen(p) = nthcumgen(fgen, p)
+        push!(ret, tensor_form(fgen(t_vec),n, modes))
     end
-    fgen1(t_vec), fgen2(t_vec), fgen3(t_vec), ret...
+    ret
   end
+
+  function cumulantsfd{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
+    fgen2(p) = ForwardDiff.hessian(t -> log(mean(exp(t'*dane'))), p)
+    nthcumgen(gen_funct) = ForwardDiff.jacobian(x -> vec(gen_funct(x)))
+    println("1")
+    n = size(dane, 2)
+    t_vec = zeros(Float64, n)
+    tensor_form(mat::Matrix, s::Int, m::Int) = reshape(mat,fill(s,m)...)
+    ret = Any[]
+    push!(ret, fgen2(t_vec))
+    fgen = fgen2
+    println("2")
+    for modes = 3:r
+        fgen = nthcumgen(fgen)
+        push!(ret, tensor_form(fgen(t_vec),n, modes))
+    end
+    println("3")
+    ret
+  end
+
 
   function permute(array::Vector{Int})
       a = Vector{Vector{Int}}[]
@@ -176,20 +192,20 @@ module Test
   end
 
 
-  function calculate_el(c::Dict{ASCIIString,Any}, list::Vector{Int})
+  function calculate_el{T<:AbstractString}(c::Dict{T ,Any}, list::Vector{Int})
       a = permute(list)
       w = 0
       for k = 1:size(a,1)
           r = 1
           for el in a[k]
-              r*= c["c"*string(size(el,1))][el...]
+              r*= c["c"*"$(size(el,1))"][el...]
           end
           w += r
       end
       return w
   end
 
-  function product4(c::Dict{ASCIIString,Any})
+  function product4{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,4)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m
@@ -200,7 +216,7 @@ module Test
       return Array(m4)
   end
 
-  function product5(c::Dict{ASCIIString,Any})
+  function product5{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,5)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m
@@ -211,7 +227,7 @@ module Test
       return Array(m4)
   end
 
-  function product6(c::Dict{ASCIIString,Any})
+  function product6{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,6)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m, i6 = i5:m
@@ -222,7 +238,7 @@ module Test
       return Array(m4)
   end
 
-  function product7(c::Dict{ASCIIString,Any})
+  function product7{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,7)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m, i6 = i5:m, i7 = i6:m
@@ -233,7 +249,7 @@ module Test
       return Array(m4)
   end
 
-  function product8(c::Dict{ASCIIString,Any})
+  function product8{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,8)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m, i6 = i5:m, i7 = i6:m, i8 = i7:m
@@ -244,7 +260,7 @@ module Test
       return Array(m4)
   end
 
-  function product9(c::Dict{ASCIIString,Any})
+  function product9{T<:AbstractString}(c::Dict{T ,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,9)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m, i6 = i5:m, i7 = i6:m, i8 = i7:m, i9 = i8:m
@@ -255,7 +271,7 @@ module Test
       return Array(m4)
   end
 
-  function product10(c::Dict{ASCIIString,Any})
+  function product10(c::Dict{AbstractString,Any})
       m = size(c["c2"], 2)
       m4 = zeros(fill(m,10)...)
       for i1 = 1:m, i2 = i1:m, i3 = i2:m, i4 = i3:m, i5 = i4:m, i6 = i5:m, i7 = i6:m, i8 = i7:m, i9 = i8:m, i10 = i9:m
@@ -268,7 +284,11 @@ module Test
 
   function snaivecumulant{T<:AbstractFloat}(data::Matrix{T}, n::Int)
       data = centre(data);
-      c2 = cov(data, corrected = false)
+      if VERSION >= v"0.5.0-dev+1204"
+        c2 = Base.covm(data, 0, 1, false)
+      elseif VERSION < v"0.5.0-dev+1204"
+        c2 = Base.covm(data, 0; corrected = false)
+      end
       c3 = moment3(data)
       cumulants = Dict("c2" => c2, "c3" => c3);
       if n == 3
@@ -328,13 +348,13 @@ module Test
    dims = ndims(randarray)
       structure = NullableArray(Array{Float64, dims}, fill(s1, dims)...)
       for i in product(fill(1:s1, dims)...)
-	 issorted(i)? structure[i...] = randarray : ()
+	       issorted(i)? structure[i...] = randarray : ()
       end
       if nonullel
-	structure[reverse(collect(1:dims))...] = randarray
+	       structure[reverse(collect(1:dims))...] = randarray
       end
       if addnonosymmbox
-	structure[fill(1, dims-1)...,2] = randarray[1:2,:]
+	       structure[fill(1, dims-1)...,2] = randarray[1:2,:]
       end
       structure
   end
@@ -349,35 +369,17 @@ module Test
     @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{Float32}(sm), 5)), Matrix{Float32}(sm))
     @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{AbstractFloat}(sm), 5)), Matrix{AbstractFloat}(sm))
 
-    @test_approx_eq(smseg*smseg2, sm*sm2)
     @test_approx_eq(convert(Array,smseg+smseg2), sm+sm2)
     @test_approx_eq(convert(Array,smseg-smseg2), sm-sm2)
     @test_approx_eq(convert(Array,smseg.*smseg2), sm.*sm2)
     @test_approx_eq(convert(Array,smseg./smseg2), sm./sm2)
-    @test_approx_eq(smseg*m, sm*m)
+
     @test_approx_eq(convert(Array,smseg*2.1), sm*2.1)
     @test_approx_eq(convert(Array,smseg/2.1), sm/2.1)
     @test_approx_eq(convert(Array,smseg*2), sm*2)
     @test_approx_eq(convert(Array,smseg+2.1), sm+2.1)
     @test_approx_eq(convert(Array,smseg-2.1), sm-2.1)
     @test_approx_eq(convert(Array,smseg+2), sm+2)
-    @test_approx_eq(convert(Array, bcss(smseg, m)), m'*(smseg*m))
-    @test_approx_eq(convert(Array, bcss(smseg, m[:,1:12])), (m[:,1:12])'*(smseg*m[:,1:12]))
-
-    m4, sm4, smseg4 = generatedata()
-    add(smseg4, 2.1)
-    @test_approx_eq(convert(Array,smseg4), sm4+2.1)
-
-    @test_approx_eq(smseg*m[:,1:12], sm*m[:,1:12])
-    @test_approx_eq(smseg*m[:,1:7], sm*m[:,1:7])
-    @test_approx_eq(smseg*m[:,1:1], sm*m[:,1:1])
-    @test_approx_eq(vec(smseg), vec(sm))
-    @test_approx_eq(trace(smseg), trace(sm))
-    @test_approx_eq(vecnorm(smseg), vecnorm(sm))
-    @test_approx_eq(convert(Array,square(smseg)), sm*sm)
-    @test_approx_eq(convert(Array,covbs(data, smseg.sizesegment, false)), cov(data, corrected=false))
-    @test_approx_eq(convert(Array, covbs(Matrix{Float32}(data), smseg.sizesegment, false)), cov(Matrix{Float32}(data), corrected=false))
-    @test_approx_eq(convert(Array,covbs(data, smseg.sizesegment, true)), cov(data, corrected=true))
 
     @test_throws(AssertionError, convert(BoxStructure, m, 5))
     @test_throws(DimensionMismatch, convert(BoxStructure, sm[:,1:13], 6))
@@ -388,11 +390,9 @@ module Test
     @test_throws(AssertionError, BoxStructure(createsegments(sm, false, 4, true)))
     @test_throws(AssertionError, BoxStructure(createsegments(m)))
     @test_throws(AssertionError, BoxStructure(createsegments(sm, true)))
-    @test_throws(DimensionMismatch, smseg*smseg1)
     @test_throws(DimensionMismatch, smseg+smseg1)
     @test_throws(DimensionMismatch, smseg.*smseg1)
-    @test_throws(DimensionMismatch, smseg*(m[1:5,:]))
-    @test_throws(DimensionMismatch, covbs(data,  badsegments))
+
 
     function genstensor(T::Type, dims::Int, l::Int, seed::Int = 1234)
       srand(seed)
@@ -444,17 +444,10 @@ module Test
     @test_approx_eq(convert(Array,bstensor+2.1), stensor+2.1)
     @test_approx_eq(convert(Array,bstensor-2.1), stensor-2.1)
     @test_approx_eq(convert(Array,bstensor+2), stensor+2)
-    @test_approx_eq(vec(bstensor), vec(stensor))
     @test_approx_eq(convert(Array,bstensor+bstensor1), stensor+stensor1)
     @test_approx_eq(convert(Array,bstensor-bstensor1), stensor-stensor1)
     @test_approx_eq(convert(Array,bstensor.*bstensor1), stensor.*stensor1)
     @test_approx_eq(convert(Array,bstensor./bstensor1), stensor./stensor1)
-    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 1), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 1))
-    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 2), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 2))
-    @test_approx_eq(modemult(bstensor, m[:,1:size(stensor, 1)], 4), Tensors.modemult(stensor, m[:,1:size(stensor, 1)], 4))
-
-    @test_throws(DimensionMismatch, modemult(bstensor, m[:,1:2], 4))
-    @test_throws(BoundsError, modemult(bstensor, m[:,1:size(stensor, 1)], ndims(stensor)+1))
     @test_throws(DimensionMismatch, bstensor+bstensor2)
     @test_throws(DimensionMismatch, bstensor.*bstensor2)
     @test_throws(DimensionMismatch, bstensor+bstensor3)
@@ -466,18 +459,6 @@ module Test
     @test_throws(DimensionMismatch, convert(BoxStructure, stensor,  badsegments))
     @test_throws(MethodError, convert(BoxStructure, randtensor(Bool, 4, 10), 3))
     @test_throws(MethodError, convert(BoxStructure, randtensor(Complex64, 4, 10), 3))
-
-
-    function multimodemult{T <: AbstractFloat, N}(t::Array{T,N}, mat::Matrix{T})
-      ret = t
-      for i = 1:N
-	  ret = Tensors.modemult(ret, mat, i)
-      end
-      ret
-    end
-
-    @test_approx_eq(convert(Array, bcssclass(bstensor, m[1:6, 1:10], 3)), multimodemult(stensor, m[1:6, 1:10]))
-    @test_approx_eq(convert(Array, bcssclass(bstensor, m[1:7, 1:10], 3)), multimodemult(stensor, m[1:7, 1:10]))
     @test_approx_eq_eps(sum(abs(mean(centre(m[1:3, 1:10]), 1))), 0, 1e-15)
 
   #rests moments via semi naive algorithms
@@ -508,33 +489,45 @@ module Test
 
   #test of semi naive algorithm using fd
   #warnings in tests from forward diff, but it works
-  csm = snaivecumulant(dat3, 6)
-  cfd = get_diff(dat3, 6)
-  @test_approx_eq(cfd[2],csm["c2"])
-  @test_approx_eq(cfd[3],csm["c3"])
-  @test_approx_eq(cfd[4],csm["c4"])
-  @test_approx_eq(cfd[5],csm["c5"])
-  @test_approx_eq(cfd[6],csm["c6"])
-  #@test_approx_eq(cfd[7],csm["c7"])
+  # for julia type 5 forward diff does not work
+  #if VERSION < v"0.5.0-dev+1204"
+  if true
+    println("fd")
+    csm = snaivecumulant(dat3, 6)
+    cfd = cumulantsfd(dat3, 6)
+    @test_approx_eq(cfd[2-1],csm["c2"])
+    @test_approx_eq(cfd[3-1],csm["c3"])
+    @test_approx_eq(cfd[4-1],csm["c4"])
+    @test_approx_eq(cfd[5-1],csm["c5"])
+    @test_approx_eq(cfd[6-1],csm["c6"])
+    #@test_approx_eq(cfd[7],csm["c7"])
+  end
 
   # test the bs algorithm using the semi naive (for non square last block)
-  c = snaivecumulant(dat1, 6)
-  c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
+  #c = snaivecumulant(dat1, 6)
+  #c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
+  c = snaivecumulant(dat1, 9)
+  c2, c3, c4, c5, c6, c7, c8, c9 = cumulants(9, dat1, 2)
   @test_approx_eq(convert(Array, c2),c["c2"])
   @test_approx_eq(convert(Array, c3),c["c3"])
   @test_approx_eq(convert(Array, c4),c["c4"])
   @test_approx_eq(convert(Array, c5),c["c5"])
   @test_approx_eq(convert(Array, c6),c["c6"])
- # @test_approx_eq(convert(Array, c7),c["c7"])
+  @test_approx_eq(convert(Array, c7),c["c7"])
+  @test_approx_eq(convert(Array, c7),c["c7"])
+  @test_approx_eq(convert(Array, c8),c["c8"])
+  @test_approx_eq(convert(Array, c9),c["c9"])
 
  # for square last block
-  c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
+ # c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
+  c2, c3, c4, c5, c6, c7, c8 = cumulants(8, dat2, 2)
   @test_approx_eq(convert(Array, c2),c["c2"][fill(1:4, 2)...])
   @test_approx_eq(convert(Array, c3),c["c3"][fill(1:4, 3)...])
   @test_approx_eq(convert(Array, c4),c["c4"][fill(1:4, 4)...])
   @test_approx_eq(convert(Array, c5),c["c5"][fill(1:4, 5)...])
   @test_approx_eq(convert(Array, c6),c["c6"][fill(1:4, 6)...])
- # @test_approx_eq(convert(Array, c7),c["c7"][fill(1:4, 7)...])
+  @test_approx_eq(convert(Array, c7),c["c7"][fill(1:4, 7)...])
+  @test_approx_eq(convert(Array, c8),c["c8"][fill(1:4, 8)...])
 
  export snaivecumulant, get_diff
 

@@ -1,4 +1,3 @@
-using ForwardDiff
 function get_diff{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
     n = size(dane, 2)
     f(t::Vector) = log(mean(exp(t'*dane')))

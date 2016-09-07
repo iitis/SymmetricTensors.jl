@@ -5,7 +5,7 @@ input array, tolerance
 """
 function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:ndims(data)
-    (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
+     (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
   end
 end
 
@@ -48,6 +48,7 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   end
 end
 
+ #if VERSION >= v"0.5.0-dev+1204 constructor gives worning"
 immutable BoxStructure{T <: AbstractFloat, S}
     frame::NullableArrays.NullableArray{Array{T,S},S}
     sizesegment::Int
@@ -130,6 +131,10 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
       end
   ret
 end
+
+convert{T<:AbstractFloat, N}(bsdata::BoxStructure{T,N}) = convert(Array, bsdata::BoxStructure{T,N})
+
+convert(c::Array{BoxStructure,1}) = [convert(Array, c[i]) for i in 1:length(c)]
 
 """elementwise opertation on many bs
 
