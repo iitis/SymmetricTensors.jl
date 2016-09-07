@@ -11,39 +11,19 @@ module Test
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
 
-  function cumulantsfd1{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
-    fgen2(p) = ForwardDiff.hessian(t -> log(mean(exp(t'*dane'))), p)
-    nthcumgen(gen_funct, p) = ForwardDiff.jacobian(x -> vec(gen_funct(x)), p)
-
-    n = size(dane, 2)
-    t_vec = zeros(Float64, n)
-    tensor_form(mat::Matrix, s::Int, m::Int) = reshape(mat,fill(s,m)...)
-    ret = Any[]
-    push!(ret, fgen2(t_vec))
-    fgen(p) = fgen2(p)
-    for modes = 3:r
-        fgen(p) = nthcumgen(fgen, p)
-        push!(ret, tensor_form(fgen(t_vec),n, modes))
-    end
-    ret
-  end
-
   function cumulantsfd{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
     fgen2(p) = ForwardDiff.hessian(t -> log(mean(exp(t'*dane'))), p)
     nthcumgen(gen_funct) = ForwardDiff.jacobian(x -> vec(gen_funct(x)))
-    println("1")
     n = size(dane, 2)
     t_vec = zeros(Float64, n)
     tensor_form(mat::Matrix, s::Int, m::Int) = reshape(mat,fill(s,m)...)
     ret = Any[]
     push!(ret, fgen2(t_vec))
     fgen = fgen2
-    println("2")
     for modes = 3:r
         fgen = nthcumgen(fgen)
         push!(ret, tensor_form(fgen(t_vec),n, modes))
     end
-    println("3")
     ret
   end
 
@@ -490,9 +470,7 @@ module Test
   #test of semi naive algorithm using fd
   #warnings in tests from forward diff, but it works
   # for julia type 5 forward diff does not work
-  #if VERSION < v"0.5.0-dev+1204"
-  if true
-    println("fd")
+  if VERSION < v"0.5.0-dev+1204"
     csm = snaivecumulant(dat3, 6)
     cfd = cumulantsfd(dat3, 6)
     @test_approx_eq(cfd[2-1],csm["c2"])
@@ -504,30 +482,30 @@ module Test
   end
 
   # test the bs algorithm using the semi naive (for non square last block)
-  #c = snaivecumulant(dat1, 6)
-  #c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
-  c = snaivecumulant(dat1, 9)
-  c2, c3, c4, c5, c6, c7, c8, c9 = cumulants(9, dat1, 2)
+  c = snaivecumulant(dat1, 6)
+  c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
+  #c = snaivecumulant(dat1, 9)
+  #c2, c3, c4, c5, c6, c7, c8, c9 = cumulants(9, dat1, 2)
   @test_approx_eq(convert(Array, c2),c["c2"])
   @test_approx_eq(convert(Array, c3),c["c3"])
   @test_approx_eq(convert(Array, c4),c["c4"])
   @test_approx_eq(convert(Array, c5),c["c5"])
   @test_approx_eq(convert(Array, c6),c["c6"])
-  @test_approx_eq(convert(Array, c7),c["c7"])
-  @test_approx_eq(convert(Array, c7),c["c7"])
-  @test_approx_eq(convert(Array, c8),c["c8"])
-  @test_approx_eq(convert(Array, c9),c["c9"])
+  #@test_approx_eq(convert(Array, c7),c["c7"])
+  #@test_approx_eq(convert(Array, c7),c["c7"])
+  #@test_approx_eq(convert(Array, c8),c["c8"])
+  #@test_approx_eq(convert(Array, c9),c["c9"])
 
  # for square last block
- # c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
-  c2, c3, c4, c5, c6, c7, c8 = cumulants(8, dat2, 2)
+  c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
+  #c2, c3, c4, c5, c6, c7, c8 = cumulants(8, dat2, 2)
   @test_approx_eq(convert(Array, c2),c["c2"][fill(1:4, 2)...])
   @test_approx_eq(convert(Array, c3),c["c3"][fill(1:4, 3)...])
   @test_approx_eq(convert(Array, c4),c["c4"][fill(1:4, 4)...])
   @test_approx_eq(convert(Array, c5),c["c5"][fill(1:4, 5)...])
   @test_approx_eq(convert(Array, c6),c["c6"][fill(1:4, 6)...])
-  @test_approx_eq(convert(Array, c7),c["c7"][fill(1:4, 7)...])
-  @test_approx_eq(convert(Array, c8),c["c8"][fill(1:4, 8)...])
+  #@test_approx_eq(convert(Array, c7),c["c7"][fill(1:4, 7)...])
+  #@test_approx_eq(convert(Array, c8),c["c8"][fill(1:4, 8)...])
 
  export snaivecumulant, get_diff
 
