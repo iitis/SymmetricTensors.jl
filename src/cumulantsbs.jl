@@ -77,21 +77,6 @@ Returns output e.g. [[i_2 i_3][i_1 i_4 i_5]]
 """
 splitind(n::Vector{Int}, pe::Vector{Vector{Int}}) = map(p->n[p], pe)
 
-"""if box is notsquared makes it square by adding slices with zeros
-
-input the box array and reguired size
-
-Returns N dimentional s x ...x s array
-"""
-function addzeros{T <: AbstractFloat, N}(s::Int, inputbox::Array{T,N})
-  if !all(collect(size(inputbox)) .== s)
-    ret = zeros(T, fill(s, N)...)
-    ind = map(k -> 1:size(inputbox,k), 1:N)
-    ret[ind...] = inputbox
-    return ret
-  end
-  inputbox
-end
 
 """calculates outer product of segments for given partition od indices
 
@@ -110,33 +95,40 @@ function productseg{T <: AbstractFloat}(s::Int, N::Int, part::Vector{Vector{Int}
   ret
 end
 
-""" sorts array of arrys of Ints according to the length of inner arrys """
-sortpart(ls::Vector{Vector{Int}}) = ls[sortperm(map(length, ls))]
-
+#todo opis
 """ determines all permutations of st of sequence of intigeers into given number of subsets
 such permutations will be used to split multiindex into subsets
 and which element of the bs list correspond to such permutation
 """
-function partitionsind(part::Vector{Int})
-  ret = Vector{Vector{Int}}[]
-  N = sum(part)
-  for p in partitions(1:N, length(part))
-    p = sortpart(p)
-    if (mapreduce(i -> (length(p[i]) == part[i]), *, 1:length(part)))
-      push!(ret, p)
-    end
-  end
-  N, ret
-end
 
 function indpart(n::Int, sigma::Int)
     perm = Vector{Vector{Int}}[]
-    corder = Vector{Int}[]
+    c_order = Vector{Int}[]
     for p in partitions(1:n, sigma)
-        s = map(length, p)
-        (1 in s)? (): (push!(perm, p), push!(corder, s))
+      s = map(length, p)
+      if !(1 in s)
+        push!(perm, p)
+        push!(c_order, s)
+      end
     end
-    perm, corder
+    perm, c_order, size(c_order, 1)
+end
+
+
+"""if box is notsquared makes it square by adding slices with zeros
+
+input the box array and reguired size
+
+Returns N dimentional s x ...x s array
+"""
+function addzeros{T <: AbstractFloat, N}(s::Int, inputbox::Array{T,N})
+  if !all(collect(size(inputbox)) .== s)
+    ret = zeros(T, fill(s, N)...)
+    ind = map(k -> 1:size(inputbox,k), 1:N)
+    ret[ind...] = inputbox
+    return ret
+  end
+  inputbox
 end
 
 """checks if all bloks in bs are squred and call the proper function that calculates mixed elements for the n'th cumulant
@@ -149,18 +141,16 @@ Returns the porper outer product function
 function ccomposition{T <: AbstractFloat}(N::Int, sigma::Int, bscum::BoxStructure{T}...)
   s = size(bscum[1])
   issquare = (s[1]*s[2] == s[3])
-  p, part = indpart(N, sigma)
+  p, part, len = indpart(N, sigma)
   ret = NullableArray(Array{T, N}, fill(s[2], N)...)
   for i in indices(N, s[2])
     temp = zeros(T, fill(s[1], N)...)
-    j = 0
-    for pk in p
-      j += 1
-      pe = splitind([i...], pk)
+    for j in 1:len
+      pe = splitind([i...], p[j])
       if issquare || !(s[2] in i)
-        @inbounds temp += productseg(s[1], N, pk, map(i -> bscum[part[j][i]-1].frame[pe[i]...].value, 1:sigma)...)
+        @inbounds temp += productseg(s[1], N, p[j], map(i -> bscum[part[j][i]-1].frame[pe[i]...].value, 1:sigma)...)
       else
-        @inbounds temp += productseg(s[1], N, pk, map(i -> addzeros(s[1], bscum[part[j][i]-1].frame[pe[i]...].value), 1:sigma)...)
+        @inbounds temp += productseg(s[1], N, p[j], map(i -> addzeros(s[1], bscum[part[j][i]-1].frame[pe[i]...].value), 1:sigma)...)
       end
     end
     if !(issquare || !(s[2] in i))
@@ -170,49 +160,6 @@ function ccomposition{T <: AbstractFloat}(N::Int, sigma::Int, bscum::BoxStructur
     @inbounds ret[i...] = temp
   end
   BoxStructure(ret)
-end
-
-"""find all partitions of the order of cumulant into elements leq 2"""
-function findpart(n::Int)
-  ret = Vector{Int}[]
-  for k = 2:floor(Int, n/2), p in partitions(n, k)
-    (1 in p)? (): push!(ret, sort(p))
-  end
-  ret
-end
-
-function pbc{T <: AbstractFloat}(part::Vector{Int}, bscum::BoxStructure{T}...)
-  s = size(bscum[1])
-  N, p = partitionsind(part)
-  n = length(part)
-  ret = NullableArray(Array{T, N}, fill(s[2], N)...)
-  issquare = (s[1]*s[2] == s[3])
-  for i in indices(N, s[2])
-    temp = zeros(T, fill(s[1], N)...)
-    for pk in p
-      pe = splitind([i...], pk)
-      if issquare || !(s[2] in i)
-        @inbounds temp += productseg(s[1], N, pk, map(i -> bscum[part[i]-1].frame[pe[i]...].value, 1:n)...)
-      else
-        @inbounds temp += productseg(s[1], N, pk, map(i -> addzeros(s[1], bscum[part[i]-1].frame[pe[i]...].value), 1:n)...)
-      end
-    end
-    if !(issquare || !(s[2] in i))
-      range = map(k -> ((s[2] == i[k])? (1:(s[3]%s[1])) : (1:s[1])), 1:size(i,1))
-      temp = temp[range...]
-    end
-    @inbounds ret[i...] = temp
-  end
-  BoxStructure(ret)
-end
-
-"""find all partitions of the order of cumulant into elements leq 2"""
-function findpart(n::Int)
-  ret = Vector{Int}[]
-  for k = 2:floor(Int, n/2), p in partitions(n, k)
-    (1 in p)? (): push!(ret, sort(p))
-  end
-  ret
 end
 
 """calculates n'th cumulant,
@@ -228,15 +175,6 @@ function cumulantn{T <: AbstractFloat}(data::Matrix{T}, n::Int, segments::Int, c
   end
   ret
 end
-
-function cumulantn1{T <: AbstractFloat}(data::Matrix{T}, n::Int, segments::Int, c::BoxStructure{T}...)
-  ret = momentbs(data, n, segments)
-  for p in findpart(n)
-    ret -= pbc(p, c...)
-  end
-  ret
-end
-
 
 
 """recursive formula, calculate cumulants up to order n
