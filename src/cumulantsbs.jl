@@ -247,7 +247,7 @@ works for any n >= 2, tested up to n = 10, in automatic tests up to n = 6 (limit
 in computation time for benchmark algorithm (semi naive))
 """
 function cumulants{T <: AbstractFloat}(n::Int, X::Matrix{T}, s::Int = 3)
-  centre!(X)
+  X = centre(X)
   ret = Array(BoxStructure{T}, n-1)
   for i = 2:n
     ret[i-1] =  (i < 4)? momentbs(X, i, s) : cumulantn(X, i, s, ret[1:(i-3)]...)
