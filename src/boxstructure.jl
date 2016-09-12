@@ -134,7 +134,7 @@ end
 
 convert{T<:AbstractFloat, N}(bsdata::BoxStructure{T,N}) = convert(Array, bsdata::BoxStructure{T,N})
 
-convert(c::Array{BoxStructure,1}) = [convert(Array, c[i]) for i in 1:length(c)]
+convert{T<:AbstractFloat}(c::Vector{BoxStructure{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
 
 """elementwise opertation on many bs
 
