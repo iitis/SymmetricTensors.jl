@@ -19,6 +19,9 @@ function centre{T<:AbstractFloat}(data::Matrix{T})
   centred
 end
 
+center(x) = centre(x)
+center!(x) = centre!(x)
+
 """ calculates the single element of the block of N'th moment
 
 input vectors that corresponds to given column of data
@@ -63,7 +66,8 @@ function centrmom{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int)
     ret = NullableArray(Array{T, n}, fill(g, n)...)
     dims = fill(s, n)
     for i in indices(n, g)
-      @inbounds ret[i...] = momentseg(dims, map(k -> X[:,sqseg(i[k], s)], 1:n)...)
+      Y = map(k -> X[:,sqseg(i[k], s)], 1:n)
+      @inbounds ret[i...] = momentseg(dims, Y...)
     end
     BoxStructure(ret)
 end
@@ -93,7 +97,7 @@ end
 
 and call the proper function
 """
-function momentbs{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int = 2)
+function momentbs{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int=3)
     (size(X,2)%s == 0)? centrmom(X,n,s) : centrmomnsq(X,n,s)
 end
 
