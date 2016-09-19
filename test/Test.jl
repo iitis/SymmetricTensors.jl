@@ -1,13 +1,19 @@
 module Test
   using Base.Test
   using NullableArrays
-  using Boxtensors
+  using SymmetricTensors
   using Iterators
   using Tensors
   using Distributions
   using ForwardDiff
-  importall Boxtensors
+  importall SymmetricTensors
   import Base: gradient
+
+  #generates random multivariate data sung copulas
+  include("copulagen.jl")
+
+  #naive algorithms for computation time tests
+  include("naivecum.jl")
 
   symmetrise{T <: AbstractFloat}(matrix::Matrix{T}) = matrix*transpose(matrix)
 
@@ -263,7 +269,7 @@ module Test
   end
 
   function snaivecumulant{T<:AbstractFloat}(data::Matrix{T}, n::Int)
-      data = centre(data);
+      data = center(data);
       if VERSION >= v"0.5.0-dev+1204"
         c2 = Base.covm(data, 0, 1, false)
       elseif VERSION < v"0.5.0-dev+1204"
@@ -311,7 +317,7 @@ module Test
 
 
   rmat = symmetrise(randn(6,6))
-  converttest = convert(BoxStructure, rmat)
+  converttest = convert(SymmetricTensor, rmat)
   @test_approx_eq(converttest.frame[1,1].value, rmat[1:3, 1:3])
   @test_approx_eq(converttest.frame[1,2].value, rmat[1:3, 4:6])
   @test_approx_eq(converttest.frame[2,2].value, rmat[4:6, 4:6])
@@ -321,7 +327,7 @@ module Test
   function generatedata(seed::Int = 1234, n::Int = 15, seg::Int = 4, l::Int = 1000)
       srand(seed)
       rmat = randn(n,n)
-      rmat, symmetrise(rmat), convert(BoxStructure, symmetrise(rmat), seg), rand(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
+      rmat, symmetrise(rmat), convert(SymmetricTensor, symmetrise(rmat), seg), rand(l,n), bitrand(n,n), (im*rmat + rmat)*(im*rmat + rmat)'
    end
 
    function createsegments(randarray, nonullel::Bool = false,  s1::Int = 4, addnonosymmbox::Bool = false)
@@ -340,14 +346,14 @@ module Test
   end
 
     m, sm, smseg, data, boolean, comlx = generatedata()
-    smseg1 = convert(BoxStructure, sm, 2)
+    smseg1 = convert(SymmetricTensor, sm, 2)
     m2, sm2, smseg2 = generatedata(1233)
     badsegments = 8
 
     @test_approx_eq(convert(Array, smseg), sm)
-    @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
-    @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{Float32}(sm), 5)), Matrix{Float32}(sm))
-    @test_approx_eq(convert(Array,convert(BoxStructure, Matrix{AbstractFloat}(sm), 5)), Matrix{AbstractFloat}(sm))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Matrix{Float16}(sm), 5)), Matrix{Float16}(sm))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Matrix{Float32}(sm), 5)), Matrix{Float32}(sm))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Matrix{AbstractFloat}(sm), 5)), Matrix{AbstractFloat}(sm))
 
     @test_approx_eq(convert(Array,smseg+smseg2), sm+sm2)
     @test_approx_eq(convert(Array,smseg-smseg2), sm-sm2)
@@ -361,15 +367,15 @@ module Test
     @test_approx_eq(convert(Array,smseg-2.1), sm-2.1)
     @test_approx_eq(convert(Array,smseg+2), sm+2)
 
-    @test_throws(AssertionError, convert(BoxStructure, m, 5))
-    @test_throws(DimensionMismatch, convert(BoxStructure, sm[:,1:13], 6))
-    @test_throws(DimensionMismatch, convert(BoxStructure, sm,  badsegments))
-    @test_throws(MethodError, convert(BoxStructure, boolean, 5))
-    @test_throws(MethodError, convert(BoxStructure, comlx, 5))
-    @test_throws(AssertionError, BoxStructure(smseg.frame[:,1:2]))
-    @test_throws(AssertionError, BoxStructure(createsegments(sm, false, 4, true)))
-    @test_throws(AssertionError, BoxStructure(createsegments(m)))
-    @test_throws(AssertionError, BoxStructure(createsegments(sm, true)))
+    @test_throws(AssertionError, convert(SymmetricTensor, m, 5))
+    @test_throws(DimensionMismatch, convert(SymmetricTensor, sm[:,1:13], 6))
+    @test_throws(DimensionMismatch, convert(SymmetricTensor, sm,  badsegments))
+    @test_throws(MethodError, convert(SymmetricTensor, boolean, 5))
+    @test_throws(MethodError, convert(SymmetricTensor, comlx, 5))
+    @test_throws(AssertionError, SymmetricTensor(smseg.frame[:,1:2]))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(sm, false, 4, true)))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(m)))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(sm, true)))
     @test_throws(DimensionMismatch, smseg+smseg1)
     @test_throws(DimensionMismatch, smseg.*smseg1)
 
@@ -403,20 +409,20 @@ module Test
     end
 
     stensor = genstensor(Float64, 4,10)
-    bstensor = (convert(BoxStructure, stensor, 3))
+    bstensor = (convert(SymmetricTensor, stensor, 3))
     stensor1 = genstensor(Float64, 4,10, 1233)
-    bstensor1 = (convert(BoxStructure, stensor1, 3))
+    bstensor1 = (convert(SymmetricTensor, stensor1, 3))
     stensor2 = genstensor(Float64, 4,11)
-    bstensor2 = (convert(BoxStructure, stensor2, 3))
+    bstensor2 = (convert(SymmetricTensor, stensor2, 3))
     stensor3 = genstensor(Float64, 3,10)
-    bstensor3 = (convert(BoxStructure, stensor2, 3))
+    bstensor3 = (convert(SymmetricTensor, stensor2, 3))
 
     # tests for tensors
 
     @test_approx_eq(convert(Array, (bstensor)), stensor)
-    @test_approx_eq(convert(Array,convert(BoxStructure, Array{Float16}(stensor), 3)), Array{Float16}(stensor))
-    @test_approx_eq(convert(Array,convert(BoxStructure, Array{Float32}(stensor), 3)), Array{Float32}(stensor))
-    @test_approx_eq(convert(Array,convert(BoxStructure, Array{AbstractFloat}(stensor), 3)), Array{AbstractFloat}(stensor))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Array{Float16}(stensor), 3)), Array{Float16}(stensor))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Array{Float32}(stensor), 3)), Array{Float32}(stensor))
+    @test_approx_eq(convert(Array,convert(SymmetricTensor, Array{AbstractFloat}(stensor), 3)), Array{AbstractFloat}(stensor))
 
     @test_approx_eq(convert(Array,bstensor*2.1), stensor*2.1)
     @test_approx_eq(convert(Array,bstensor/2.1), stensor/2.1)
@@ -432,17 +438,17 @@ module Test
     @test_throws(DimensionMismatch, bstensor.*bstensor2)
     @test_throws(DimensionMismatch, bstensor+bstensor3)
     @test_throws(DimensionMismatch, bstensor.*bstensor3)
-    @test_throws(AssertionError, BoxStructure(bstensor.frame[:,:,:,1:2]))
-    @test_throws(AssertionError, BoxStructure(createsegments(randtensor(Float64, 4, 10))))
-    @test_throws(AssertionError, BoxStructure(createsegments(sm, false, 4, true)))
-    @test_throws(AssertionError, BoxStructure(createsegments(stensor, true)))
-    @test_throws(DimensionMismatch, convert(BoxStructure, stensor,  badsegments))
-    @test_throws(MethodError, convert(BoxStructure, randtensor(Bool, 4, 10), 3))
-    @test_throws(MethodError, convert(BoxStructure, randtensor(Complex64, 4, 10), 3))
-    @test_approx_eq_eps(sum(abs(mean(centre(m[1:3, 1:10]), 1))), 0, 1e-15)
+    @test_throws(AssertionError, SymmetricTensor(bstensor.frame[:,:,:,1:2]))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(randtensor(Float64, 4, 10))))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(sm, false, 4, true)))
+    @test_throws(AssertionError, SymmetricTensor(createsegments(stensor, true)))
+    @test_throws(DimensionMismatch, convert(SymmetricTensor, stensor,  badsegments))
+    @test_throws(MethodError, convert(SymmetricTensor, randtensor(Bool, 4, 10), 3))
+    @test_throws(MethodError, convert(SymmetricTensor, randtensor(Complex64, 4, 10), 3))
+    @test_approx_eq_eps(sum(abs(mean(center(m[1:3, 1:10]), 1))), 0, 1e-15)
 
   #rests moments via semi naive algorithms
-  dat = centre(data[1:15,1:5])
+  dat = center(data[1:15,1:5])
   @test_approx_eq(convert(Array, momentbs(dat, 3, 2)), moment3(dat))
   @test_approx_eq(convert(Array, momentbs(dat, 4, 2)), moment4(dat))
 

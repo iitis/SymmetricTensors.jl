@@ -1,3 +1,12 @@
+immutable SymmetricTensor{T <: AbstractFloat, S}
+    frame::NullableArrays.NullableArray{Array{T,S},S}
+    sizesegment::Int
+    function call{T, S}(::Type{SymmetricTensor}, frame::NullableArrays.NullableArray{Array{T,S},S})
+        structfeatures(frame)
+        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
+    end
+end
+
 
 """ tests if the array is symmetric for a given tolerance
 
@@ -48,16 +57,6 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   end
 end
 
- #if VERSION >= v"0.5.0-dev+1204 constructor gives worning"
-immutable BoxStructure{T <: AbstractFloat, S}
-    frame::NullableArrays.NullableArray{Array{T,S},S}
-    sizesegment::Int
-    function call{T, S}(::Type{BoxStructure}, frame::NullableArrays.NullableArray{Array{T,S},S})
-        structfeatures(frame)
-        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
-    end
-end
-
 
 """produces  set of indices for data in multidiemntional array
 to read them in segments to perform bs
@@ -73,7 +72,7 @@ input N dimentional Array
 
 Returns N dimentional bs
 """
-function convert{T <: AbstractFloat, N}(::Type{BoxStructure}, data::Array{T, N}, segments::Int = 2)
+function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, segments::Int = 2)
   issymetric(data)
   len = size(data,1)
   segsizetest(len, segments)
@@ -84,7 +83,7 @@ function convert{T <: AbstractFloat, N}(::Type{BoxStructure}, data::Array{T, N},
         readind = map(k::Int -> seg(k, ceil(Int, len/segments), len), writeind)
         @inbounds ret[writeind...] = data[readind...]
     end
-  BoxStructure(ret)
+  SymmetricTensor(ret)
 end
 
 """ reads a segemnt with given multiindex,
@@ -93,7 +92,7 @@ if multiindex not sorted, find segment with sorted once and performs
 
 returns N dimentional Array
 """
-function readsegments(i::Vector{Int}, bs::BoxStructure)
+function readsegments(i::Vector{Int}, bs::SymmetricTensor)
   sortidx = sortperm(i)
   permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
 end
@@ -104,7 +103,7 @@ input bs
 
 Return Tuple of Ints
 """
-function size{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N})
+function size{T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N})
   segsize = bsdata.sizesegment
   numsegments = size(bsdata.frame, 1)
   numdata = segsize * (numsegments-1) + size(bsdata.frame[end].value, 1)
@@ -113,7 +112,7 @@ end
 
 """tests if sizes on many bs are the same - for elementwise opertation on may bs
 """
-function testsize{T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}...)
+function testsize{T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N}...)
   for i = 2:size(bsdata,1)
     @inbounds size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
   end
@@ -121,7 +120,7 @@ end
 
 """ converts bs into Array
 """
-function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
+function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::SymmetricTensor{T,N})
   s = size(bsdata)
   ret = zeros(T, fill(s[3], N)...)
     for i = 1:(s[2]^N)
@@ -132,9 +131,9 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::BoxStructure{T,N})
   ret
 end
 
-convert{T<:AbstractFloat, N}(bsdata::BoxStructure{T,N}) = convert(Array, bsdata::BoxStructure{T,N})
+convert{T<:AbstractFloat, N}(bsdata::SymmetricTensor{T,N}) = convert(Array, bsdata::SymmetricTensor{T,N})
 
-convert{T<:AbstractFloat}(c::Vector{BoxStructure{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
+convert{T<:AbstractFloat}(c::Vector{SymmetricTensor{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
 
 """elementwise opertation on many bs
 
@@ -142,7 +141,7 @@ input many bs of the same size
 
 Returns single bs of the size of input bs
 """
-function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}...)
+function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T,N}...)
   n = size(bsdata, 1)
   (n > 1)? testsize(bsdata...):()
   ret = similar(bsdata[1].frame)
@@ -150,7 +149,7 @@ function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}
   for i in ind
     @inbounds ret[i...] = op(map(k ->  bsdata[k].frame[i...].value, 1:n)...)
   end
-  BoxStructure(ret)
+  SymmetricTensor(ret)
 end
 
 """elementwise opertation on bs and number
@@ -159,29 +158,29 @@ input bs and number (Real)
 
 Returns single bs of the size of input bs
 """
-function operation{T<: AbstractFloat, N}(op::Function, bsdata::BoxStructure{T,N}, a::Real)
+function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T,N}, a::Real)
   ret = similar(bsdata.frame)
   ind = indices(N, size(bsdata.frame, 1))
   for i in ind
     @inbounds ret[i...] = op(bsdata.frame[i...].value, a)
   end
-  BoxStructure(ret)
+  SymmetricTensor(ret)
 end
 
-operation(op::Function, a::Real, bsdata::BoxStructure) = operation(op, bsdata, a)
+operation(op::Function, a::Real, bsdata::SymmetricTensor) = operation(op, bsdata, a)
 
 # implements simple operations on bs structure
 
 
 for op = (:+, :-, :.*, :./)
-  @eval ($op){T <: AbstractFloat, N}(bsdata::BoxStructure{T, N}, bsdata1::BoxStructure{T, N}) = operation($op, bsdata, bsdata1)
+  @eval ($op){T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N}, bsdata1::SymmetricTensor{T, N}) = operation($op, bsdata, bsdata1)
 end
 
 
 for op = (:+, :-, :*, :/)
-  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::BoxStructure{T}, n::S)  = operation($op, bsdata, n)
+  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::SymmetricTensor{T}, n::S)  = operation($op, bsdata, n)
 end
 
 for op = (:+, :*)
-  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, bsdata::BoxStructure{T})  = operation($op, bsdata, n)
+  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, bsdata::SymmetricTensor{T})  = operation($op, bsdata, n)
 end

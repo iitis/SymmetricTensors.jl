@@ -1,26 +1,23 @@
 # ---- following code is used to caclulate moments ----
 
-""" centre data. Given data matrix centres each column,
+""" center data. Given data matrix centers each column,
 substracts columnwise mean for all data in the column
 performs centring for each column,
 
 Returns matrix
 """
-function centre!{T<:AbstractFloat}(data::Matrix{T})
+function center!{T<:AbstractFloat}(data::Matrix{T})
   n = size(data, 2)
   for i = 1:n
     @inbounds data[:,i] = data[:,i]-mean(data[:,i])
   end
 end
 
-function centre{T<:AbstractFloat}(data::Matrix{T})
-  centred = copy(data)
-  centre!(centred)
-  centred
+function center{T<:AbstractFloat}(data::Matrix{T})
+  centerd = copy(data)
+  center!(centerd)
+  centerd
 end
-
-center(x) = centre(x)
-center!(x) = centre!(x)
 
 """ calculates the single element of the block of N'th moment
 
@@ -69,7 +66,7 @@ function centrmom{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int)
       Y = map(k -> X[:,sqseg(i[k], s)], 1:n)
       @inbounds ret[i...] = momentseg(dims, Y...)
     end
-    BoxStructure(ret)
+    SymmetricTensor(ret)
 end
 
 
@@ -90,7 +87,7 @@ function centrmomnsq{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int)
       dims = map(i -> (size(Y[i], 2)), 1:n)
       @inbounds ret[i...] = momentseg(dims, Y...)
     end
-    BoxStructure(ret)
+    SymmetricTensor(ret)
 end
 
 """examines if the last box is square or not
@@ -175,7 +172,7 @@ c2, c3, ..., c(n-2) - lowe cumulants input
 
 Returns the porper outer product function
 """
-function outerprod{T <: AbstractFloat}(n::Int, sigma::Int, c::BoxStructure{T}...)
+function outerprod{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...)
   s,g,M = size(c[1])
   p, r, len = indpart(n, sigma)
   ret = NullableArray(Array{T, n}, fill(g, n)...)
@@ -187,14 +184,14 @@ function outerprod{T <: AbstractFloat}(n::Int, sigma::Int, c::BoxStructure{T}...
     end
     @inbounds ret[i...] = temp
   end
-  BoxStructure(ret)
+  SymmetricTensor(ret)
 end
 
 """
 calculates mixed element for given sigma, if last blockes are not squared
 
 """
-function outerprodnsq{T <: AbstractFloat}(n::Int, sigma::Int, c::BoxStructure{T}...)
+function outerprodnsq{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...)
   s,g,M = size(c[1])
   p, r, len = indpart(n, sigma)
   ret = NullableArray(Array{T, n}, fill(g, n)...)
@@ -214,7 +211,7 @@ function outerprodnsq{T <: AbstractFloat}(n::Int, sigma::Int, c::BoxStructure{T}
     end
     @inbounds ret[i...] = temp
   end
-  BoxStructure(ret)
+  SymmetricTensor(ret)
 end
 
 
@@ -222,7 +219,7 @@ end
 
 the proper function that calculates mixed elements for the n'th cumulant
 """
-function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::BoxStructure{T}...)
+function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...)
   s,g,M = size(c[1])
   (M%s == 0)? outerprod(n,sigma,c...) : outerprodnsq(n,sigma,c...)
 end
@@ -233,7 +230,7 @@ input data - matrix of data, n - the order of the cumulant, segments - number of
 c - cumulants in the bs form orderred as follow c2, c3, ..., c(n-2)
 
 Returns the n order cumulant in the bs form"""
-function cumulantn{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int, c::BoxStructure{T}...)
+function cumulantn{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int, c::SymmetricTensor{T}...)
   ret =  momentbs(X, n, s)
   for sigma in 2:floor(Int, n/2)
     ret -= outerp(n, sigma, c...)
@@ -251,8 +248,8 @@ works for any n >= 2, tested up to n = 10, in automatic tests up to n = 6 (limit
 in computation time for benchmark algorithm (semi naive))
 """
 function cumulants{T <: AbstractFloat}(n::Int, X::Matrix{T}, s::Int = 3)
-  X = centre(X)
-  ret = Array(BoxStructure{T}, n-1)
+  X = center(X)
+  ret = Array(SymmetricTensor{T}, n-1)
   for i = 2:n
     ret[i-1] =  (i < 4)? momentbs(X, i, s) : cumulantn(X, i, s, ret[1:(i-3)]...)
   end

@@ -1,4 +1,4 @@
-module Boxtensors
+module SymmetricTensors
   using NullableArrays
   using Iterators
   using Tensors #Gawron tensors
@@ -11,17 +11,10 @@ module Boxtensors
 
 
   # Type implementation ond simple operations
-  include("boxstructure.jl")
+  include("symmetrictensors.jl")
 
   #calculates moments and cumulants
-  include("cumulantsbs.jl")
+  include("cumulants.jl")
 
-  #generates random multivariate data sung copulas
-  include("copulagen.jl")
-
-  #naive algorithms for computation time tests
-  include("naivecum.jl")
-
-
-  export BoxStructure, convert, +, -, *, /, momentbs, centre, cumulants, clcopulagen, naivecumulant
+  export SymmetricTensor, convert, +, -, *, /, momentbs, center, cumulants
 end
