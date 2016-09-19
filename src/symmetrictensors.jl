@@ -13,6 +13,7 @@ end
 input array, tolerance
 """
 function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
+  length(data)>0? () : return
   for i=2:ndims(data)
      (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
   end
