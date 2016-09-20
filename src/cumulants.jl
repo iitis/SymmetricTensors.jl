@@ -45,10 +45,6 @@ function momentseg{T <: AbstractFloat}(dims::Array{Int}, Y::Matrix{T}...)
   ret
 end
 
-"""axilaiary function that creates indices for blocks
-"""
-sqseg(i::Int, of::Int) =  (i-1)*of+1 : i*of
-
 """ calculate N'th moment in the bs form
 
 input matrix of data, the order of the moment (N), number of segments for bs

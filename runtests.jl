@@ -1,2 +1,2 @@
-include("src/Boxtensors.jl")
+include("src/SymmetricTensors.jl")
 include("test/Test.jl")
