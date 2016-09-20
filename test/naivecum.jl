@@ -10,7 +10,7 @@ end
 cumulantelement{T<:AbstractFloat}(A::Vector{T}, B::Vector{T}, C::Vector{T}, D::Vector{T}, E::Vector{T}) = mean(A.*B.*C.*D.*E) + mixedelements(A,B,C,D,E)
 
 function naivecumulant{T<:AbstractFloat}(data::Matrix{T}, order::Int = 4)
-    data = centre(data)
+    data = center(data)
     n = size(data, 2)
     ret = zeros(T, fill(n, order)...)
     @inbounds for i = 1:(n^order)
