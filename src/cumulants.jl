@@ -137,6 +137,7 @@ calculates mixed element for given sigma, if last blockes are not squared
 function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...)
   s,g,M = size(c[1])
   p, r, len = indpart(n, sigma)
+  #p, r, len = setpart2(n, sigma)
   ret = NullableArray(Array{T, n}, fill(g, n)...)
   issquare = (s*g==M)
   for i in indices(n, g)

@@ -498,13 +498,12 @@ module Test
   @test_approx_eq(convert(Array, c5),c["c5"])
   @test_approx_eq(convert(Array, c6),c["c6"])
   #@test_approx_eq(convert(Array, c7),c["c7"])
-  #@test_approx_eq(convert(Array, c7),c["c7"])
   #@test_approx_eq(convert(Array, c8),c["c8"])
   #@test_approx_eq(convert(Array, c9),c["c9"])
 
  # for square last block
   c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
-  #c2, c3, c4, c5, c6, c7, c8 = cumulants(8, dat2, 2)
+  #c2, c3, c4, c5, c6, c7, c8, c9 = cumulants(9, dat2, 2)
   @test_approx_eq(convert(Array, c2),c["c2"][fill(1:4, 2)...])
   @test_approx_eq(convert(Array, c3),c["c3"][fill(1:4, 3)...])
   @test_approx_eq(convert(Array, c4),c["c4"][fill(1:4, 4)...])
@@ -512,6 +511,7 @@ module Test
   @test_approx_eq(convert(Array, c6),c["c6"][fill(1:4, 6)...])
   #@test_approx_eq(convert(Array, c7),c["c7"][fill(1:4, 7)...])
   #@test_approx_eq(convert(Array, c8),c["c8"][fill(1:4, 8)...])
+  #@test_approx_eq(convert(Array, c9),c["c9"][fill(1:4, 9)...])
 
  export snaivecumulant, get_diff
 
