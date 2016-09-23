@@ -35,9 +35,7 @@ Returns N dimentional array (segment)
 """
 function momentseg{T <: AbstractFloat}(dims::Array{Int}, Y::Matrix{T}...)
   n = length(Y)
-#  ret = SharedArray(T, dims...)
   ret = zeros(T, dims...)
-#  @sync @parallel
   for i = 1:prod(dims)
     ind = ind2sub((dims...), i)
     @inbounds ret[ind...] = momentel(map(k -> Y[k][:,ind[k]], 1:n)...)
@@ -88,7 +86,6 @@ function prodblocks{T <: AbstractFloat}(s::Int, n::Int, part::Vector{Vector{Int}
     ind = ind2sub((fill(s, n)...), i)
     pe = splitind(collect(ind), part)
     @inbounds ret[ind...] = mapreduce(i -> c[i][pe[i]...], *, 1:size(part, 1))
-    #size(c, 1) = size(part, 1)
   end
   ret
 end
@@ -137,7 +134,6 @@ calculates mixed element for given sigma, if last blockes are not squared
 function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...)
   s,g,M = size(c[1])
   p, r, len = indpart(n, sigma)
-  #p, r, len = setpart2(n, sigma)
   ret = NullableArray(Array{T, n}, fill(g, n)...)
   issquare = (s*g==M)
   for i in indices(n, g)
