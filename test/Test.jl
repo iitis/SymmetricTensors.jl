@@ -195,17 +195,16 @@ module Test
    #test of semi naive algorithm using fd
    #warnings in tests from forward diff, but it works
    # for julia type 5 forward diff does not work
-   #if VERSION < v"0.5.0-dev+1204"
-  if false
-     csm = snaivecumulant(dat3, 6)
-     cfd = cumulantsfd(dat3, 6)
-     @test_approx_eq(cfd[2-1],csm["c2"])
-     @test_approx_eq(cfd[3-1],csm["c3"])
-     @test_approx_eq(cfd[4-1],csm["c4"])
-     @test_approx_eq(cfd[5-1],csm["c5"])
-     @test_approx_eq(cfd[6-1],csm["c6"])
-     #@test_approx_eq(cfd[7],csm["c7"])
-   end
+  #  if VERSION < v"0.5.0-dev+1204"
+  #    csm = snaivecumulant(dat3, 6)
+  #    cfd = cumulantsfd(dat3, 6)
+  #    @test_approx_eq(cfd[2-1],csm["c2"])
+  #    @test_approx_eq(cfd[3-1],csm["c3"])
+  #    @test_approx_eq(cfd[4-1],csm["c4"])
+  #    @test_approx_eq(cfd[5-1],csm["c5"])
+  #    @test_approx_eq(cfd[6-1],csm["c6"])
+  #    #@test_approx_eq(cfd[7],csm["c7"])
+  #  end
 
  export snaivecumulant, get_diff
 
