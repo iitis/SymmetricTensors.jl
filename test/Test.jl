@@ -163,19 +163,21 @@ module Test
   dat3 = dat1[:,1:2]
 
   # test the bs algorithm using the naive (for square last block)
-  cn = [naivecumulant(dat1, i) for i = 2:5]
-  c2, c3, c4, c5 = cumulants(5, dat1, 2)
+  cn = [naivecumulant(dat1, i) for i = 2:6]
+  c2, c3, c4, c5, c6 = cumulants(6, dat1, 2)
   @test_approx_eq(convert(Array, c2),cn[1])
   @test_approx_eq(convert(Array, c3),cn[2])
   @test_approx_eq(convert(Array, c4),cn[3])
   @test_approx_eq(convert(Array, c5),cn[4])
+  @test_approx_eq(convert(Array, c6),cn[5])
 
  # for nonsquare last block
-  c2, c3, c4, c5 = cumulants(5, dat2, 2)
+  c2, c3, c4, c5, c6 = cumulants(6, dat2, 2)
   @test_approx_eq(convert(Array, c2),cn[1][fill(1:3, 2)...])
   @test_approx_eq(convert(Array, c3),cn[2][fill(1:3, 3)...])
   @test_approx_eq(convert(Array, c4),cn[3][fill(1:3, 4)...])
   @test_approx_eq(convert(Array, c5),cn[4][fill(1:3, 5)...])
+  @test_approx_eq(convert(Array, c6),cn[5][fill(1:3, 6)...])
 
 
   # test higher cumulants for square last block
@@ -193,7 +195,8 @@ module Test
    #test of semi naive algorithm using fd
    #warnings in tests from forward diff, but it works
    # for julia type 5 forward diff does not work
-   if VERSION < v"0.5.0-dev+1204"
+   #if VERSION < v"0.5.0-dev+1204"
+  if false
      csm = snaivecumulant(dat3, 6)
      cfd = cumulantsfd(dat3, 6)
      @test_approx_eq(cfd[2-1],csm["c2"])
