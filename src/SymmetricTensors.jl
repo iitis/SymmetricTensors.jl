@@ -1,14 +1,11 @@
 module SymmetricTensors
   using NullableArrays
   using Iterators
-  using Tensors #Gawron tensors
   using ForwardDiff
-  using Stats
   if VERSION >= v"0.5.0-dev+1204"
     using Combinatorics
   end
   import Base: trace, vec, vecnorm, +, -, *, .*, /, \, ./, size, transpose, convert, ndims
-  import Tensors: unfold
 
 
   # Type implementation ond simple operations
@@ -18,7 +15,7 @@ module SymmetricTensors
   include("cumulants.jl")
 
   #partitions. Knuth modified algorithm
-  #include("part.jl")
+  #include("/home/krzysztof/Dokumenty/badania_iitis/tensors_symetric/tensor calculations/calc&codes/indpart/part.jl")
 
-  export SymmetricTensor, convert, +, -, *, /, momentbs, center, cumulants
+  export SymmetricTensor, convert, +, -, *, /, momentbs, center, cumulants, unfold ,outerp
 end

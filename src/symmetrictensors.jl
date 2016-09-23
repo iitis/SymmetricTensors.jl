@@ -1,10 +1,28 @@
+#immutable SymmetricTensor{T <: AbstractFloat, S}
+#    frame::NullableArrays.NullableArray{Array{T,S},S}
+#    sizesegment::Int
+#    function call{T, S}(::Type{SymmetricTensor}, frame::NullableArrays.NullableArray{Array{T,S},S})
+#        structfeatures(frame)
+#        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
+#    end
+#end
+
 immutable SymmetricTensor{T <: AbstractFloat, S}
     frame::NullableArrays.NullableArray{Array{T,S},S}
     sizesegment::Int
-    function call{T, S}(::Type{SymmetricTensor}, frame::NullableArrays.NullableArray{Array{T,S},S})
+    function (::Type{SymmetricTensor}){T, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
         structfeatures(frame)
         new{T, S}(frame, size(frame[fill(1,S)...].value,1))
     end
+end
+
+"""unfold function from Tensors Gawron"""
+function unfold_g(A::Array, n::Int)
+    C = setdiff(1:ndims(A), n)
+    I = size(A)
+    J = prod(I[n])
+    K = prod(I[C])
+    return reshape(permutedims(A,[n; C]), J, K)
 end
 
 
@@ -15,7 +33,8 @@ input array, tolerance
 function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
   length(data)>0? () : return
   for i=2:ndims(data)
-     (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
+     #(maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
+     (maximum(abs(unfold_g(data, 1)-unfold_g(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
   end
 end
 
