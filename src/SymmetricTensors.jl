@@ -7,6 +7,11 @@ module SymmetricTensors
   end
   import Base: trace, vec, vecnorm, +, -, *, .*, /, \, ./, size, transpose, convert, ndims
 
+  if VERSION >= v"0.5.0-dev+1204"
+    include("constructorj5.jl")
+  else
+    include("constructorj4.jl")
+  end
 
   # Type implementation ond simple operations
   include("symmetrictensors.jl")
