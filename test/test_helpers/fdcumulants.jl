@@ -13,3 +13,25 @@ function cumulantsfd{T<:AbstractFloat}(dane::Matrix{T}, r::Int = 4)
   end
   ret
 end
+
+
+using ForwardDiff
+dane = randn(2,2)
+#cumulantsfd(dane,2)[1]
+kappa(t::Vector) = log(mean(exp(t'*dane')))
+fgen2(p::Vector) = ForwardDiff.hessian(kappa, p)
+function nthcumgen(gen_funct, x::Vector)
+    f(x::Vector) = vec(gen_funct(x))
+    ForwardDiff.jacobian(f, x)
+end
+n = size(dane, 2)
+t_vec = zeros(Float64, n)
+#tensor_form(mat::Matrix, s::Int, m::Int) = reshape(mat,fill(s,m)...)
+#nthcumgen(fgen2, t_vec)
+#f(x::Vector) = fgen2(x::Vector)
+#f(x::Vector) = nthcumgen(f, x)
+#f(x::Vector) = nthcumgen(f, x)
+f1(x::Vector) = nthcumgen(fgen2, x)
+f2(x::Vector) = nthcumgen(f1, x)
+f3(x::Vector) = nthcumgen(f2, x)
+nthcumgen(f3, t_vec)
