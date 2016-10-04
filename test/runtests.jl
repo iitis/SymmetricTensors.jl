@@ -1,7 +1,6 @@
 using FactCheck
 using SymmetricTensors
 using Distributions
-using ForwardDiff
 using NullableArrays
 using Iterators
 
