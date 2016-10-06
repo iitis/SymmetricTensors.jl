@@ -80,9 +80,8 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   segsizetest(len, segments)
   (len%segments == 0)? () : segments += 1
   ret = NullableArray(Array{T, N}, fill(segments, N)...)
-  ind = indices(N, segments)
   g = ceil(Int, len/segments)
-  for writeind in ind
+  for writeind in indices(N, segments)
       readind = map(k::Int -> seg(k, g, len), writeind)
       @inbounds ret[writeind...] = data[readind...]
   end
@@ -148,8 +147,7 @@ function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T
   n = size(bsdata, 1)
   (n > 1)? testsize(bsdata...):()
   ret = similar(bsdata[1].frame)
-  ind = indices(N, size(bsdata[1].frame, 1))
-  for i in ind
+  for i in indices(N, size(bsdata[1].frame, 1))
     @inbounds ret[i...] = op(map(k ->  bsdata[k].frame[i...].value, 1:n)...)
   end
   SymmetricTensor(ret)
@@ -163,8 +161,7 @@ Returns single bs of the size of input bs
 """
 function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T,N}, a::Real)
   ret = similar(bsdata.frame)
-  ind = indices(N, size(bsdata.frame, 1))
-  for i in ind
+  for i in indices(N, size(bsdata.frame, 1))
     @inbounds ret[i...] = op(bsdata.frame[i...].value, a)
   end
   SymmetricTensor(ret)

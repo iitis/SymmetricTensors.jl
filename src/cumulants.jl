@@ -7,8 +7,8 @@ performs centring for each column,
 Returns matrix
 """
 function center!{T<:AbstractFloat}(data::Matrix{T})
-  n = size(data, 2)
-  for i = 1:n
+  #n = size(data, 2)
+  for i = 1:size(data, 2)
     @inbounds data[:,i] = data[:,i]-mean(data[:,i])
   end
 end
