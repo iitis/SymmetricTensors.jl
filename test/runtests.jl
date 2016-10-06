@@ -74,6 +74,12 @@ facts("Helper functions") do
   context("center") do
     @fact sum(abs(mean(center(rmat[1:3, 1:10]), 1))) --> roughly(0, 1e-15)
   end
+  context("unfold") do
+    A = reshape(collect(1:8), 2, 2, 2)
+    @fact unfold(A, 1) --> [[1 3 5 7]; [2 4 6 8]]
+    @fact unfold(A, 2) --> [[1 2 5 6]; [3 4 7 8]]
+    @fact unfold(A, 3) --> [[1 2 3 4]; [5 6 7 8]]
+  end
 end
 
 data = clcopulagen(10, 4)
