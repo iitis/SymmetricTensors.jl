@@ -94,8 +94,8 @@ if multiindex not sorted, find segment with sorted once and performs
 
 returns N dimentional Array
 """
-function readsegments(i::Vector{Int}, bt::SymmetricTensor)
-  sortidx = sortperm(i)
+function readsegments(i::Tuple, bt::SymmetricTensor)
+  sortidx = sortperm([i...])
   permutedims(bt.frame[i[sortidx]...].value, invperm(sortidx))
 end
 
@@ -128,7 +128,7 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, bt::SymmetricTensor{T,N})
     for i = 1:(s[2]^N)
         readind = ind2sub((fill(s[2], N)...), i)
         writeind = map(k -> seg(readind[k], s[1], s[3]), 1:N)
-        @inbounds ret[writeind...] = readsegments(collect(readind), bt)
+        @inbounds ret[writeind...] = readsegments(readind, bt)
       end
   ret
 end
