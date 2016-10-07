@@ -96,7 +96,7 @@ end
 facts("Comulants vs naive implementation") do
   cn = [naivecumulant(data, i) for i = 2:6]
   context("Square blocks") do
-    c2, c3, c4, c5, c6 = cumulants(6, data, 2)
+    c2, c3, c4, c5, c6 = cumulants(data, 6, 2)
     @fact convert(Array, c2) --> roughly(cn[1])
     @fact convert(Array, c3) --> roughly(cn[2])
     @fact convert(Array, c4) --> roughly(cn[3])
@@ -105,7 +105,7 @@ facts("Comulants vs naive implementation") do
   end
 
   context("Non-square blocks") do
-    c2, c3, c4, c5, c6 = cumulants(6, data[:, 1:3], 2)
+    c2, c3, c4, c5, c6 = cumulants(data[:, 1:3], 6, 2)
     @fact convert(Array, c2) --> roughly(cn[1][fill(1:3, 2)...])
     @fact convert(Array, c3) --> roughly(cn[2][fill(1:3, 3)...])
     @fact convert(Array, c4) --> roughly(cn[3][fill(1:3, 4)...])
@@ -126,7 +126,7 @@ facts("test semi-naive against gaussian") do
 end
 
 facts("Cumulants vs semi-naive non-square") do
-  c2, c3, c4, c5, c6, c7, c8 = cumulants(8, data[:, 1:2], 2)
+  c2, c3, c4, c5, c6, c7, c8 = cumulants(data[:, 1:2], 8, 2)
   cnn = snaivecumulant(data[:, 1:2], 8)
   @fact convert(Array, c2) --> roughly(cnn["c2"])
   @fact convert(Array, c3) --> roughly(cnn["c3"])

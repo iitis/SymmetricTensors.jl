@@ -7,7 +7,6 @@ performs centring for each column,
 Returns matrix
 """
 function center!{T<:AbstractFloat}(data::Matrix{T})
-  #n = size(data, 2)
   for i = 1:size(data, 2)
     @inbounds data[:,i] = data[:,i]-mean(data[:,i])
   end
@@ -33,11 +32,11 @@ input r - matrices of data
 
 Returns N dimentional array (segment)
 """
-function momentseg{T <: AbstractFloat}(dims::Array{Int}, Y::Matrix{T}...)
+function momentseg{T <: AbstractFloat}(dims::Tuple, Y::Matrix{T}...)
   n = length(Y)
-  ret = zeros(T, dims...)
+  ret = zeros(T, dims)
   for i = 1:prod(dims)
-    ind = ind2sub((dims...), i)
+    ind = ind2sub((dims), i)
     @inbounds ret[ind...] = momentel(map(k -> Y[k][:,ind[k]], 1:n)...)
   end
   ret
@@ -54,10 +53,11 @@ Case if last boxes are not squared
 function momentbs{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int)
     M = size(X,2)
     g = ceil(Int, M/s)
+    range = ((1:n)...)
     ret = NullableArray(Array{T, n}, fill(g, n)...)
     for i in indices(n, g)
       Y = map(k -> X[:,seg(i[k], s, M)], 1:n)
-      dims = map(i -> (size(Y[i], 2)), 1:n)
+      dims = map(i -> (size(Y[i], 2)), range)
       @inbounds ret[i...] = momentseg(dims, Y...)
     end
     SymmetricTensor(ret)
@@ -109,7 +109,6 @@ function indpart(n::Int, sigma::Int)
     p, r, length(r)
 end
 
-
 """if box is notsquared makes it square by adding slices with zeros
 
 input the box array and reguired size
@@ -139,7 +138,7 @@ function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...
   for i in indices(n, g)
     temp = zeros(T, fill(s, n)...)
     for j in 1:len
-      pe = splitind([i...], p[j])
+      pe = splitind(collect(i), p[j])
       if !issquare && (g in i)
         @inbounds temp += prodblocks(s, n, p[j], map(l -> addzeros(s[1], c[r[j][l]-1].frame[pe[l]...].value), 1:sigma)...)
       else
@@ -147,7 +146,7 @@ function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...
       end
     end
     if !issquare && (g in i)
-      range = map(k -> ((g == i[k])? (1:(M%s)) : (1:s)), 1:length(i))
+      range = map(k -> ((g == i[k])? (1:(M%s)) : (1:s)), (1:length(i)...))
       temp = temp[range...]
     end
     @inbounds ret[i...] = temp
@@ -179,7 +178,7 @@ Returns cumulants in the bs form orderred as follow c2, c3, ..., cn
 works for any n >= 2, tested up to n = 10, in automatic tests up to n = 6 (limit due to the increasement
 in computation time for benchmark algorithm (semi naive))
 """
-function cumulants{T <: AbstractFloat}(n::Int, X::Matrix{T}, s::Int = 3)
+function cumulants{T <: AbstractFloat}(X::Matrix{T}, n::Int, s::Int = 3)
   X = center(X)
   ret = Array(SymmetricTensor{T}, n-1)
   for i = 2:n

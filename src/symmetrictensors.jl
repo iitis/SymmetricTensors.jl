@@ -32,11 +32,11 @@ Return Array of indices (ints)
 todo moze da sie zrobic w tuplach
 """
 function indices(N::Int, n::Int)
-    ret = Vector{Int}[]
+    ret = Tuple{fill(Int, N)...}[]
     @eval begin
         @nloops $N i x -> (x==$N)? (1:$n): (i_{x+1}:$n) begin
             ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds push!($ret, [ind...])
+            @inbounds push!($ret, ind)
         end
     end
     ret
@@ -94,9 +94,9 @@ if multiindex not sorted, find segment with sorted once and performs
 
 returns N dimentional Array
 """
-function readsegments(i::Vector{Int}, bs::SymmetricTensor)
+function readsegments(i::Vector{Int}, bt::SymmetricTensor)
   sortidx = sortperm(i)
-  permutedims(bs.frame[i[sortidx]...].value, invperm(sortidx))
+  permutedims(bt.frame[i[sortidx]...].value, invperm(sortidx))
 end
 
 """gives the  number of boxes and the size of data stored in bs
@@ -105,37 +105,37 @@ input bs
 
 Return Tuple of Ints
 """
-function size{T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N})
-  segsize = bsdata.sizesegment
-  numsegments = size(bsdata.frame, 1)
-  numdata = segsize * (numsegments-1) + size(bsdata.frame[end].value, 1)
-  segsize, numsegments, numdata
+function size{T <: AbstractFloat, N}(bt::SymmetricTensor{T, N})
+  segsize = bt.sizesegment
+  numseg = size(bt.frame, 1)
+  numdata = segsize * (numseg-1) + size(bt.frame[end].value, 1)
+  segsize, numseg, numdata
 end
 
 """tests if sizes on many bs are the same - for elementwise opertation on may bs
 """
-function testsize{T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N}...)
-  for i = 2:size(bsdata,1)
-    @inbounds size(bsdata[1]) == size(bsdata[i]) || throw(DimensionMismatch("dims of B1 $(size(bsdata[1])) must equal to dims of B$i $(size(bsdata[i]))"))
+function testsize{T <: AbstractFloat, N}(bt::SymmetricTensor{T, N}...)
+  for i = 2:size(bt,1)
+    @inbounds size(bt[1]) == size(bt[i]) || throw(DimensionMismatch("dims of B1 $(size(bt[1])) must equal to dims of B$i $(size(bt[i]))"))
   end
 end
 
 """ converts bs into Array
 """
-function convert{T<:AbstractFloat, N}(::Type{Array}, bsdata::SymmetricTensor{T,N})
-  s = size(bsdata)
+function convert{T<:AbstractFloat, N}(::Type{Array}, bt::SymmetricTensor{T,N})
+  s = size(bt)
   ret = zeros(T, fill(s[3], N)...)
     for i = 1:(s[2]^N)
         readind = ind2sub((fill(s[2], N)...), i)
         writeind = map(k -> seg(readind[k], s[1], s[3]), 1:N)
-        @inbounds ret[writeind...] = readsegments(collect(readind), bsdata)
+        @inbounds ret[writeind...] = readsegments(collect(readind), bt)
       end
   ret
 end
 
-convert{T<:AbstractFloat, N}(bsdata::SymmetricTensor{T,N}) = convert(Array, bsdata::SymmetricTensor{T,N})
+convert{T<:AbstractFloat, N}(bt::SymmetricTensor{T,N}) = convert(Array, bt::SymmetricTensor{T,N})
 
-convert{T<:AbstractFloat}(c::Vector{SymmetricTensor{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
+convert{T<:AbstractFloat}(A::Vector{SymmetricTensor{T}}) = [convert(Array, A[i]) for i in 1:length(A)]
 
 """elementwise opertation on many bs
 
@@ -143,12 +143,12 @@ input many bs of the same size
 
 Returns single bs of the size of input bs
 """
-function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T,N}...)
-  n = size(bsdata, 1)
-  (n > 1)? testsize(bsdata...):()
-  ret = similar(bsdata[1].frame)
-  for i in indices(N, size(bsdata[1].frame, 1))
-    @inbounds ret[i...] = op(map(k ->  bsdata[k].frame[i...].value, 1:n)...)
+function operation{T<: AbstractFloat, N}(op::Function, A::SymmetricTensor{T,N}...)
+  n = size(A, 1)
+  (n > 1)? testsize(A...):()
+  ret = similar(A[1].frame)
+  for i in indices(N, size(A[1])[2])
+    @inbounds ret[i...] = op(map(k ->  A[k].frame[i...].value, 1:n)...)
   end
   SymmetricTensor(ret)
 end
@@ -159,28 +159,28 @@ input bs and number (Real)
 
 Returns single bs of the size of input bs
 """
-function operation{T<: AbstractFloat, N}(op::Function, bsdata::SymmetricTensor{T,N}, a::Real)
-  ret = similar(bsdata.frame)
-  for i in indices(N, size(bsdata.frame, 1))
-    @inbounds ret[i...] = op(bsdata.frame[i...].value, a)
+function operation{T<: AbstractFloat, N}(op::Function, bt::SymmetricTensor{T,N}, num::Real)
+  ret = similar(bt.frame)
+  for i in indices(N, size(bt)[2])
+    @inbounds ret[i...] = op(bt.frame[i...].value, num)
   end
   SymmetricTensor(ret)
 end
 
-operation(op::Function, a::Real, bsdata::SymmetricTensor) = operation(op, bsdata, a)
+operation(op::Function, a::Real, bt::SymmetricTensor) = operation(op, bt, a)
 
 # implements simple operations on bs structure
 
 
 for op = (:+, :-, :.*, :./)
-  @eval ($op){T <: AbstractFloat, N}(bsdata::SymmetricTensor{T, N}, bsdata1::SymmetricTensor{T, N}) = operation($op, bsdata, bsdata1)
+  @eval ($op){T <: AbstractFloat, N}(bt::SymmetricTensor{T, N}, bt1::SymmetricTensor{T, N}) = operation($op, bt, bt1)
 end
 
 
 for op = (:+, :-, :*, :/)
-  @eval ($op){T <: AbstractFloat, S <: Real}(bsdata::SymmetricTensor{T}, n::S)  = operation($op, bsdata, n)
+  @eval ($op){T <: AbstractFloat, S <: Real}(bt::SymmetricTensor{T}, n::S)  = operation($op, bt, n)
 end
 
 for op = (:+, :*)
-  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, bsdata::SymmetricTensor{T})  = operation($op, bsdata, n)
+  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, bt::SymmetricTensor{T})  = operation($op, bt, n)
 end
