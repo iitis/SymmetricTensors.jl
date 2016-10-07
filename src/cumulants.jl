@@ -146,7 +146,7 @@ function outerp{T <: AbstractFloat}(n::Int, sigma::Int, c::SymmetricTensor{T}...
       end
     end
     if !issquare && (g in i)
-      range = map(k -> ((g == i[k])? (1:(M%s)) : (1:s)), (1:length(i)...))
+      range = map(k -> ((g == i[k])? (1:(M%s)) : (1:s)), (1:length(i)))
       temp = temp[range...]
     end
     @inbounds ret[i...] = temp
