@@ -122,11 +122,7 @@ output: cumulants up to n (dict of arrays)
 """
 function snaivecumulant{T<:AbstractFloat}(data::Matrix{T}, n::Int)
     data = center(data);
-    if VERSION >= v"0.5.0-dev+1204"
-      c2 = Base.covm(data, 0, 1, false)
-    elseif VERSION < v"0.5.0-dev+1204"
-      c2 = Base.covm(data, 0; corrected = false)
-    end
+    c2 = Base.covm(data, 0, 1, false)
     cumulants = Dict("c2" => c2, "c3" => moment_n(data, 3));
     for k in 4:n
       merge!(cumulants, Dict("c$k" => moment_n(data, k) - produ(cumulants, k)))
