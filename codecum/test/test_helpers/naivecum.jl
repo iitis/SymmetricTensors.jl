@@ -1,3 +1,37 @@
+# copula based non Gaussian data generator
+
+srand(42)
+
+"""
+auxiliary function for copula data generation
+inverse of copula generation function
+"""
+invers_gen(x::Vector{Float64}, theta::Float64) = (1+ theta.*x).^(-1/theta)
+
+
+"""
+Uses Clayton copula with Weibull marginals to generate data that
+are not gaussian distributed for tests
+
+
+input data size t::Int, m::Int
+
+output data matrix(t, m)
+"""
+function clcopulagen(t::Int, m::Int)
+    theta = 1.02
+    qamma_dist = Gamma(1,1/theta)
+    x = rand(t)
+    u = rand(t,m)
+    marginals_ret = zeros(Float64, t,m)
+    for i = 1:m
+        copula_ret = invers_gen(-log(u[:,i])./quantile(qamma_dist, x), theta)
+        marginals_ret[:,i] = quantile(Weibull(1.+0.01*i,1), copula_ret)
+    end
+    marginals_ret
+end
+
+
 # uses the naive method to calculate cumulants 2 - 6
 
 """
