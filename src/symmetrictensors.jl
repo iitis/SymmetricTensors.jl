@@ -1,3 +1,4 @@
+"""Type constructor"""
 immutable SymmetricTensor{T <: AbstractFloat, S}
     frame::NullableArrays.NullableArray{Array{T,S},S}
     sizesegment::Int
@@ -7,7 +8,12 @@ immutable SymmetricTensor{T <: AbstractFloat, S}
     end
 end
 
-"""unfold function from Tensors Gawron"""
+"""Unfold function.
+
+Input: A - tensor, n - mode of unfold.
+
+Output: matrix.
+"""
 function unfold(A::Array, n::Int)
     C = setdiff(1:ndims(A), n)
     I = size(A)
@@ -16,21 +22,23 @@ function unfold(A::Array, n::Int)
     return reshape(permutedims(A,[n; C]), J, K)
 end
 
+"""Tests if the array is symmetric for given tolerance.
 
-""" tests if the array is symmetric for a given tolerance
+Input: array, atol - tolerance
 
-input array, tolerance
+Output: Assertion Error if failed
 """
-function issymetric{T <: AbstractFloat, N}(data::Array{T, N}, atol::Float64 = 1e-7)
-  length(data)>0? () : return
-  for i=2:ndims(data)
-     (maximum(abs(unfold(data, 1)-unfold(data, i))) < atol) || throw(AssertionError("array is not symmetric"))
+function issymetric{T <: AbstractFloat, N}(array::Array{T, N}, atol::Float64 = 1e-7)
+  for i=2:ndims(array)
+     (maximum(abs(unfold(array, 1)-unfold(array, i))) < atol) || throw(AssertionError("array not symmetric"))
   end
 end
 
-""" test wether the last segment of bs is not larger that an ordinary segment
+""" Tests the block size.
+
+Return: DimensionMismatch in failed.
 """
-segsizetest(len::Int, segments::Int) = ((len%segments) <= (len÷segments)) || throw(DimensionMismatch("last segment len $(len-segments*(len÷segments)) > segment len $(len÷segments)"))
+sizetest(n::Int, s::Int) = (n >= s > 0) || throw(DimensionMismatch("wrong segment size $s"))
 
 """generates the set of sorted indices to run any operation on bs in a single loop.
 
@@ -67,7 +75,6 @@ function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArr
   end
 end
 
-
 """produces  set of indices for data in multidiemntional array
 to read them in segments to perform bs
 
@@ -75,22 +82,21 @@ Return range
 """
 seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit)
 
+"""converts super-symmetric array into blocks.
 
-"""converts super-symmetric array into bs
+Input: data - Array{N}, s - size of block.
 
-input N dimentional Array
-
-Returns N dimentional bs
+Returns: Array{N} of blocks.
 """
-function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, segments::Int = 2)
+
+function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, s::Int = 2)
   issymetric(data)
-  len = size(data,1)
-  segsizetest(len, segments)
-  (len%segments == 0)? () : segments += 1
-  ret = NullableArray(Array{T, N}, fill(segments, N)...)
-  g = ceil(Int, len/segments)
-  for writeind in indices(N, segments)
-      readind = map(k::Int -> seg(k, g, len), writeind)
+  n = size(data,1)
+  sizetest(n, s)
+  q = ceil(Int, n/s)
+  ret = NullableArray(Array{T, N}, fill(q, N)...)
+  for writeind in indices(N, q)
+      readind = map(k::Int -> seg(k, s, n), writeind)
       @inbounds ret[writeind...] = data[readind...]
   end
   SymmetricTensor(ret)

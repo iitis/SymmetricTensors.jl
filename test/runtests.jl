@@ -12,7 +12,7 @@ rmat3, srmat3, smseg3 = generatedata(14)
 rmat4, srmat4, smseg4 = generatedata(15, 3)
 
 facts("Converting") do
-  converttest = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6])
+  converttest = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
   context("From array to SymmetricTensor") do
     @fact converttest.frame[1,1,1].value --> roughly(srmat[1:3, 1:3, 1:3])
     @fact converttest.frame[1,2,2].value --> roughly(srmat[1:3, 4:6, 4:6])
@@ -58,8 +58,9 @@ facts("Exceptions") do
     @fact_throws AssertionError, SymmetricTensor(create_except(rand(4,4,4)))
     @fact_throws AssertionError, SymmetricTensor(create_except(srmat, false, true))
     @fact_throws AssertionError, SymmetricTensor(create_except(srmat, true))
-    # to may blocks
-    @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  8)
+    # wrong block size
+    @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  25)
+    @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  0)
   end
 end
 
