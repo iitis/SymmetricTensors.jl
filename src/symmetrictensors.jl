@@ -1,10 +1,10 @@
 """Type constructor"""
-immutable SymmetricTensor{T <: AbstractFloat, S}
-    frame::NullableArrays.NullableArray{Array{T,S},S}
-    sizesegment::Int
-    function (::Type{SymmetricTensor}){T, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
+immutable SymmetricTensor{T <: AbstractFloat, N}
+    frame::NullableArray{Array{T,N},N}
+    blocksize::Int
+    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N})
         structfeatures(frame)
-        new{T, S}(frame, size(frame[fill(1,S)...].value,1))
+        new{T, N}(frame, size(frame[fill(1,N)...].value,1))
     end
 end
 
@@ -60,32 +60,37 @@ function indices(N::Int, n::Int)
     ret
 end
 
-"""examine if data can be stored in the bs form....
+"""Examines if data can be stored in SymmetricTensor form.
 
-search for expected exception
+Input: data - nullable array of arrays.
+
+Returns: Assertion error if: all sizes of nullable array not equal, at least
+  one undergiagonal block not null, at lest one (not last) block not squared,
+   at lest one diagonal block not symmetric.
 """
-function structfeatures{T <: AbstractFloat, N}(frame::NullableArray{Array{T,N},N})
-  fsize = size(frame, 1)
-  all(collect(size(frame)) .== fsize) ||
+function structfeatures{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N})
+  fsize = size(data, 1)
+  all(collect(size(data)) .== fsize) ||
   throw(AssertionError("frame not square"))
-  not_nulls = !frame.isnull
+  not_nulls = !data.isnull
   !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
-  throw(AssertionError("underdiagonal block not null"))
+  throw(AssertionError("underdiag. block not null"))
   for i in indices(N, fsize-1)
-    @inbounds all(collect(size(frame[i...].value)) .== size(frame[i...].value, 1)) ||
+    @inbounds all(collect(size(data[i...].value)) .== size(data[i...].value, 1)) ||
     throw(AssertionError("[$i ] block not square"))
   end
   for i=1:fsize
-    @inbounds issymetric(frame[fill(i, N)...].value)
+    @inbounds issymetric(data[fill(i, N)...].value)
   end
 end
 
-"""produces  set of indices for data in multidiemntional array
-to read them in segments to perform bs
+"""Produces a range of indices to determine the block.
 
-Return range
+Input: i - block's number, s - block's size, n - data size.
+
+Returns: range.
 """
-seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit)
+seg(i::Int, s::Int, n::Int) = (i-1)*s+1 : ((i*s <= n)? i*s : n)
 
 """Converts super-symmetric array into blocks.
 
@@ -107,54 +112,59 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   SymmetricTensor(ret)
 end
 
-""" reads a segemnt with given multiindex,
-if multiindex not sorted, find segment with sorted once and performs
-  required permutation od fims
+"""Reads a block, given multiindex If multiindex is not sorted,
+sorts it, finds a block and permutes dimentions of output.
 
-returns N dimentional Array
+Imput: i - mulitiindex tuple, st: - SymmetricTensor
+
+Returns: Array
 """
-function readsegments(i::Tuple, bt::SymmetricTensor)
-  sortidx = sortperm([i...])
-  permutedims(bt.frame[i[sortidx]...].value, invperm(sortidx))
+function readsegments(i::Tuple, st::SymmetricTensor)
+  ind = sortperm([i...])
+  permutedims(st.frame[i[ind]...].value, invperm(ind))
 end
 
-"""gives the  number of boxes and the size of data stored in bs
+"""Gives features of SymmetricTensor object
 
-input bs
+input st - SymmetricTensor object
 
-Return Tuple of Ints
+Return: s - block's size, g - number of blocks, n - data size
 """
-function size{T <: AbstractFloat, N}(bt::SymmetricTensor{T, N})
-  segsize = bt.sizesegment
-  numseg = size(bt.frame, 1)
-  numdata = segsize * (numseg-1) + size(bt.frame[end].value, 1)
-  segsize, numseg, numdata
+function size{T <: AbstractFloat, N}(st::SymmetricTensor{T, N})
+  s = st.blocksize
+  g = size(st.frame, 1)
+  n = s * (g-1) + size(st.frame[end].value, 1)
+  s, g, n
 end
 
-"""tests if sizes on many bs are the same - for elementwise opertation on may bs
+"""Converts Symmetric Tensor object to Array
 """
-function testsize{T <: AbstractFloat, N}(bt::SymmetricTensor{T, N}...)
-  for i = 2:size(bt,1)
-    @inbounds size(bt[1]) == size(bt[i]) || throw(DimensionMismatch("dims of B1 $(size(bt[1])) must equal to dims of B$i $(size(bt[i]))"))
-  end
-end
-
-""" converts bs into Array
-"""
-function convert{T<:AbstractFloat, N}(::Type{Array}, bt::SymmetricTensor{T,N})
-  s = size(bt)
+function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
+  s = size(st)
   ret = zeros(T, fill(s[3], N)...)
     for i = 1:(s[2]^N)
         readind = ind2sub((fill(s[2], N)...), i)
         writeind = map(k -> seg(readind[k], s[1], s[3]), 1:N)
-        @inbounds ret[writeind...] = readsegments(readind, bt)
+        @inbounds ret[writeind...] = readsegments(readind, st)
       end
   ret
 end
+convert{T<:AbstractFloat, N}(st::SymmetricTensor{T,N}) = convert(Array, st::SymmetricTensor{T,N})
 
-convert{T<:AbstractFloat, N}(bt::SymmetricTensor{T,N}) = convert(Array, bt::SymmetricTensor{T,N})
-
+"""Converts vector of Symmetric Tensors to vector of Arrays
+"""
 convert{T<:AbstractFloat}(A::Vector{SymmetricTensor{T}}) = [convert(Array, A[i]) for i in 1:length(A)]
+
+# ---- basic operations on Symmetric Tensors ----
+
+"""Tests if sizes on many bs are the same - for elementwise opertation on may bs
+"""
+function testsize{T <: AbstractFloat, N}(bt::SymmetricTensor{T, N}...)
+  for i = 2:size(bt,1)
+    @inbounds size(bt[1]) == size(bt[i]) ||
+    throw(DimensionMismatch("dims of B1 $(size(bt[1])) must equal dims of B$i $(size(bt[i]))"))
+  end
+end
 
 """elementwise opertation on many bs
 
@@ -190,11 +200,9 @@ operation(op::Function, a::Real, bt::SymmetricTensor) = operation(op, bt, a)
 
 # implements simple operations on bs structure
 
-
 for op = (:+, :-, :.*, :./)
   @eval ($op){T <: AbstractFloat, N}(bt::SymmetricTensor{T, N}, bt1::SymmetricTensor{T, N}) = operation($op, bt, bt1)
 end
-
 
 for op = (:+, :-, :*, :/)
   @eval ($op){T <: AbstractFloat, S <: Real}(bt::SymmetricTensor{T}, n::S)  = operation($op, bt, n)
