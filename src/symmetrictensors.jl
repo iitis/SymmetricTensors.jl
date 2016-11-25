@@ -12,7 +12,7 @@ end
 
 Input: A - tensor, n - mode of unfold.
 
-Output: matrix.
+Returns: matrix.
 """
 function unfold(A::Array, n::Int)
     C = setdiff(1:ndims(A), n)
@@ -26,26 +26,28 @@ end
 
 Input: array, atol - tolerance
 
-Output: Assertion Error if failed
+Returns: Assertion Error if failed
 """
 function issymetric{T <: AbstractFloat, N}(array::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:ndims(array)
-     (maximum(abs(unfold(array, 1)-unfold(array, i))) < atol) || throw(AssertionError("array not symmetric"))
+     (maximum(abs(unfold(array, 1)-unfold(array, i))) < atol) ||
+     throw(AssertionError("array not symmetric"))
   end
 end
 
 """ Tests the block size.
 
-Return: DimensionMismatch in failed.
+Input: n - size of data, s - size of block.
+
+Returns: DimensionMismatch in failed.
 """
 sizetest(n::Int, s::Int) = (n >= s > 0) || throw(DimensionMismatch("wrong segment size $s"))
 
-"""generates the set of sorted indices to run any operation on bs in a single loop.
+"""Generates the tuple of sorted indices.
 
-input N - number of dimentions, n - maximal index value
+Input: N - size of the tuple, n - maximal index value.
 
-Return Array of indices (ints)
-todo moze da sie zrobic w tuplach
+Return Ordered tuple of indices (a multi-index)
 """
 function indices(N::Int, n::Int)
     ret = Tuple{fill(Int, N)...}[]
@@ -62,16 +64,19 @@ end
 
 search for expected exception
 """
-function structfeatures{T <: AbstractFloat, S}(frame::NullableArrays.NullableArray{Array{T,S},S})
+function structfeatures{T <: AbstractFloat, N}(frame::NullableArray{Array{T,N},N})
   fsize = size(frame, 1)
-  all(collect(size(frame)) .== fsize) || throw(AssertionError("frame not square"))
+  all(collect(size(frame)) .== fsize) ||
+  throw(AssertionError("frame not square"))
   not_nulls = !frame.isnull
-  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) || throw(AssertionError("underdiagonal block not null"))
-  for i in indices(S, fsize-1)
-    @inbounds all(collect(size(frame[i...].value)) .== size(frame[i...].value, 1)) || throw(AssertionError("[$i ] block not square"))
+  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
+  throw(AssertionError("underdiagonal block not null"))
+  for i in indices(N, fsize-1)
+    @inbounds all(collect(size(frame[i...].value)) .== size(frame[i...].value, 1)) ||
+    throw(AssertionError("[$i ] block not square"))
   end
   for i=1:fsize
-    @inbounds issymetric(frame[fill(i, S)...].value)
+    @inbounds issymetric(frame[fill(i, N)...].value)
   end
 end
 
@@ -82,7 +87,7 @@ Return range
 """
 seg(i::Int, of::Int, limit::Int) =  (i-1)*of+1 : ((i*of <= limit) ? i*of : limit)
 
-"""converts super-symmetric array into blocks.
+"""Converts super-symmetric array into blocks.
 
 Input: data - Array{N}, s - size of block.
 
