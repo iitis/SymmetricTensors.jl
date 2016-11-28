@@ -25,8 +25,8 @@ generates 3 mode tensor of size n
 output:: array{Float64, 3}, super symmetric array, super symmetric array in
 block form
 """
-function generatedata(n::Int = 15, seg::Int = 4)
-    rmat = randn(n,n,n)
+function generatedata(n::Int = 15, seg::Int = 4, N::Int = 3)
+    rmat = randn(fill(n, N)...)
     srmat = symmetrise(rmat)
     rmat, srmat, convert(SymmetricTensor, srmat, seg)
  end

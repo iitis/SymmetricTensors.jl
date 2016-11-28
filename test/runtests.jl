@@ -4,12 +4,38 @@ using NullableArrays
 using Iterators
 using Combinatorics
 
+import SymmetricTensors: seg, val, indices, readsegments
+
 include("test_helpers/generate_data.jl")
 
 rmat, srmat, smseg = generatedata()
+rmat1, srmat1, smseg1 = generatedata(15, 5, 2)
 rmat2, srmat2, smseg2 = generatedata()
 rmat3, srmat3, smseg3 = generatedata(14)
 rmat4, srmat4, smseg4 = generatedata(15, 3)
+
+facts("Helpers") do
+  test = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
+  test1 = convert(SymmetricTensor, srmat[1:7, 1:7, 1:7], 3)
+  context("size test") do
+    @fact test.sqr --> true
+    @fact test1.sqr --> false
+    @fact size(test) --> (3,2,6)
+  end
+  context("val") do
+    @fact val(test, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
+    @fact val(test, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
+  end
+  context("indexing") do
+    @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
+    @fact seg(2,3,5) --> 4:5
+  end
+  context("read segment") do
+    @fact readsegments(test, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
+    @fact readsegments(test, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
+  end
+end
+
 
 facts("Converting") do
   converttest = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
@@ -22,6 +48,9 @@ facts("Converting") do
 
   context("From SymmetricTensor to array") do
     @fact convert(Array, smseg) --> roughly(srmat)
+    @fact convert(smseg) --> roughly(srmat)
+    @fact convert([smseg1, smseg])[1] --> roughly([srmat1, srmat][1])
+    @fact convert([smseg1, smseg])[2] --> roughly([srmat1, srmat][2])
   end
 end
 
@@ -40,6 +69,7 @@ facts("Basic operations") do
     @fact convert(Array,smseg+2.1) -->roughly(srmat+2.1)
     @fact convert(Array,smseg-2.1) -->roughly(srmat-2.1)
     @fact convert(Array,smseg+2) -->roughly(srmat+2)
+    @fact convert(Array,2+smseg) -->roughly(srmat+2)
   end
 end
 
