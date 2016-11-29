@@ -4,7 +4,7 @@ using NullableArrays
 using Iterators
 using Combinatorics
 
-import SymmetricTensors: seg, val, indices, readsegments
+import SymmetricTensors: seg, val, indices, readsegments, issymetric, sizetest
 
 include("test_helpers/generate_data.jl")
 
@@ -15,42 +15,55 @@ rmat3, srmat3, smseg3 = generatedata(14)
 rmat4, srmat4, smseg4 = generatedata(15, 3)
 
 facts("Helpers") do
-  test = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
-  test1 = convert(SymmetricTensor, srmat[1:7, 1:7, 1:7], 3)
-  context("size test") do
-    @fact test.sqr --> true
-    @fact test1.sqr --> false
-    @fact size(test) --> (3,2,6)
+  A = reshape(collect(1:8), 2, 2, 2)
+  context("unfold") do
+    @fact unfold(A, 1) --> [[1 3 5 7]; [2 4 6 8]]
+    @fact unfold(A, 2) --> [[1 2 5 6]; [3 4 7 8]]
+    @fact unfold(A, 3) --> [[1 2 3 4]; [5 6 7 8]]
   end
-  context("val") do
-    @fact val(test, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
-    @fact val(test, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
+  context("symmetry") do
+    @fact_throws AssertionError, issymetric(rmat)
+    @fact issymetric(srmat) --> nothing
   end
   context("indexing") do
     @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
     @fact seg(2,3,5) --> 4:5
   end
-  context("read segment") do
-    @fact readsegments(test, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
-    @fact readsegments(test, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
+  context("sizetest") do
+    @fact_throws DimensionMismatch, sizetest(2,3)
   end
 end
 
-
+test_dat = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
 facts("Converting") do
-  converttest = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
   context("From array to SymmetricTensor") do
-    @fact converttest.frame[1,1,1].value --> roughly(srmat[1:3, 1:3, 1:3])
-    @fact converttest.frame[1,2,2].value --> roughly(srmat[1:3, 4:6, 4:6])
-    @fact converttest.frame[2,2,2].value --> roughly(srmat[4:6, 4:6, 4:6])
-    @fact isnull(converttest.frame[2,1,1]) --> true
+    @fact test_dat.frame[1,1,1].value --> roughly(srmat[1:3, 1:3, 1:3])
+    @fact test_dat.frame[1,2,2].value --> roughly(srmat[1:3, 4:6, 4:6])
+    @fact test_dat.frame[2,2,2].value --> roughly(srmat[4:6, 4:6, 4:6])
+    @fact isnull(test_dat.frame[2,1,1]) --> true
   end
-
   context("From SymmetricTensor to array") do
     @fact convert(Array, smseg) --> roughly(srmat)
     @fact convert(smseg) --> roughly(srmat)
     @fact convert([smseg1, smseg])[1] --> roughly([srmat1, srmat][1])
     @fact convert([smseg1, smseg])[2] --> roughly([srmat1, srmat][2])
+  end
+end
+
+facts("Reading Symmetric Tensors") do
+  test1 = convert(SymmetricTensor, srmat[1:7, 1:7, 1:7], 3)
+  context("size test") do
+    @fact test_dat.sqr --> true
+    @fact test1.sqr --> false
+    @fact size(test_dat) --> (3,2,6)
+  end
+  context("read segment") do
+    @fact readsegments(test_dat, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
+    @fact readsegments(test_dat, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
+  end
+  context("val") do
+    @fact val(test_dat, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
+    @fact val(test_dat, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
   end
 end
 
@@ -91,14 +104,5 @@ facts("Exceptions") do
     # wrong block size
     @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  25)
     @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  0)
-  end
-end
-
-facts("Helper functions") do
-  context("unfold") do
-    A = reshape(collect(1:8), 2, 2, 2)
-    @fact unfold(A, 1) --> [[1 3 5 7]; [2 4 6 8]]
-    @fact unfold(A, 2) --> [[1 2 5 6]; [3 4 7 8]]
-    @fact unfold(A, 3) --> [[1 2 3 4]; [5 6 7 8]]
   end
 end

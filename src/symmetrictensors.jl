@@ -13,11 +13,11 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     dats::Int
     sqr::Bool
     function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N})
-        structfeatures(frame)
         s = size(frame[fill(1,N)...].value,1)
         g = size(frame, 1)
         last_block = size(frame[end].value, 1)
         m = s * (g-1) + last_block
+        frtest(frame, s, g)
         new{T, N}(frame, s, g, m, s == last_block)
     end
 end
@@ -28,12 +28,11 @@ Input: A - tensor, n - mode of unfold.
 
 Returns: matrix.
 """
-function unfold(A::Array, n::Int)
-    C = setdiff(1:ndims(A), n)
-    I = size(A)
-    J = I[n]
-    K = prod(I[C])
-    return reshape(permutedims(A,[n; C]), J, K)
+function unfold(ar::Array, n::Int)
+    C = setdiff(1:ndims(ar), n)
+    i = size(ar)
+    k = prod(i[C])
+    return reshape(permutedims(ar,[n; C]), i[n], k)
 end
 
 """Tests if the array is symmetric for given tolerance.
@@ -42,20 +41,32 @@ Input: array, atol - tolerance
 
 Returns: Assertion Error if failed
 """
-function issymetric{T <: AbstractFloat, N}(array::Array{T, N}, atol::Float64 = 1e-7)
-  for i=2:ndims(array)
-     (maximum(abs(unfold(array, 1)-unfold(array, i))) < atol) ||
-     throw(AssertionError("array not symmetric"))
+function issymetric{T <: AbstractFloat, N}(ar::Array{T, N}, atol::Float64 = 1e-7)
+  for i=2:N
+     maximum(abs(unfold(ar, 1)-unfold(ar, i))) < atol ||throw(AssertionError("not symmetric"))
   end
 end
 
-""" Tests the block size.
+"""Examines if data can be stored in SymmetricTensor form.
 
-Input: n - size of data, s - size of block.
+Input: data - nullable array of arrays.
 
-Returns: DimensionMismatch in failed.
+Returns: Assertion error if: all sizes of nullable array not equal, at least
+  one undergiagonal block not null, at lest one (not last) block not squared,
+   at lest one diagonal block not symmetric.
 """
-sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("wrong segment size $s > $m"))
+function frtest{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N}, s::Int, g::Int)
+  all(collect(size(data)) .== g) || throw(AssertionError("frame not square"))
+  not_nulls = !data.isnull
+  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
+  throw(AssertionError("underdiag. block not null"))
+  for i in indices(N, g-1)
+    @inbounds all(collect(size(data[i...].value)) .== s)|| throw(AssertionError("$i block not square"))
+  end
+  for i=1:g
+    @inbounds issymetric(data[fill(i, N)...].value)
+  end
+end
 
 """Generates the tuple of sorted indices.
 
@@ -67,43 +78,26 @@ function indices(N::Int, m::Int)
     ret = Tuple{fill(Int, N)...}[]
     @eval begin
         @nloops $N i x -> (x==$N)? (1:$m): (i_{x+1}:$m) begin
-            ind = @ntuple $N x -> i_{$N-x+1}
+            @inbounds ind = @ntuple $N x -> i_{$N-x+1}
             @inbounds push!($ret, ind)
         end
     end
     ret
 end
 
-""" Helper, gives a value of Nullable arrays inside symmetric tensotrs, at given
+""" Tests the block size.
+
+Input: n - size of data, s - size of block.
+
+Returns: DimensionMismatch in failed.
+"""
+sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("bad block size $s > $m"))
+
+""" Helper, gives a value of Nullable arrays inside Symmetric Tensor, at given
 tuple or array of multi indices
 """
 val{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Union{Tuple, Array{Int}}) =
   st.frame[i...].value
-
-
-"""Examines if data can be stored in SymmetricTensor form.
-
-Input: data - nullable array of arrays.
-
-Returns: Assertion error if: all sizes of nullable array not equal, at least
-  one undergiagonal block not null, at lest one (not last) block not squared,
-   at lest one diagonal block not symmetric.
-"""
-function structfeatures{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N})
-  fsize = size(data, 1)
-  all(collect(size(data)) .== fsize) ||
-  throw(AssertionError("frame not square"))
-  not_nulls = !data.isnull
-  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
-  throw(AssertionError("underdiag. block not null"))
-  for i in indices(N, fsize-1)
-    @inbounds all(collect(size(data[i...].value)) .== size(data[i...].value, 1)) ||
-    throw(AssertionError("[$i] block not square"))
-  end
-  for i=1:fsize
-    @inbounds issymetric(data[fill(i, N)...].value)
-  end
-end
 
 """Produces a range of indices to determine the block.
 
@@ -127,7 +121,7 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   q = ceil(Int, m/s)
   ret = NullableArray(Array{T, N}, fill(q, N)...)
   for writeind in indices(N, q)
-      readind = map(k::Int -> seg(k, s, m), writeind)
+      @inbounds readind = map(k::Int -> seg(k, s, m), writeind)
       @inbounds ret[writeind...] = data[readind...]
   end
   SymmetricTensor(ret)
@@ -151,8 +145,7 @@ input st - SymmetricTensor object
 
 Return: block's size, number of blocks, data size
 """
-size{T <: AbstractFloat, N}(st::SymmetricTensor{T, N}) = (st.bls, st.bln, st.dats)
-
+size{T <: AbstractFloat, N}(st::SymmetricTensor{T, N}) = st.bls, st.bln, st.dats
 
 """Converts Symmetric Tensor object to Array
 """
@@ -160,8 +153,8 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
   s, g , m = size(st)
   ret = zeros(T, fill(m, N)...)
     for i = 1:(g^N)
-        readind = ind2sub((fill(g, N)...), i)
-        writeind = map(k -> seg(readind[k], s, m), 1:N)
+        @inbounds readind = ind2sub((fill(g, N)...), i)
+        @inbounds writeind = map(k -> seg(readind[k], s, m), 1:N)
         @inbounds ret[writeind...] = readsegments(st, readind)
       end
   ret
@@ -170,7 +163,7 @@ convert{T<:AbstractFloat, N}(st::SymmetricTensor{T,N}) = convert(Array, st::Symm
 
 """Converts vector of Symmetric Tensors to vector of Arrays
 """
-convert{T<:AbstractFloat}(A::Vector{SymmetricTensor{T}}) = [convert(Array, A[i]) for i in 1:length(A)]
+convert{T<:AbstractFloat}(c::Vector{SymmetricTensor{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
 
 # ---- basic operations on Symmetric Tensors ----
 
