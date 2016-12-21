@@ -12,12 +12,14 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     bln::Int
     dats::Int
     sqr::Bool
-    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N})
+    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N}, test::Bool = true)
         s = size(frame[fill(1,N)...].value,1)
         g = size(frame, 1)
         last_block = size(frame[end].value, 1)
         m = s * (g-1) + last_block
-        frtest(frame, s, g)
+        if test
+          frtest(frame, s, g)
+        end
         new{T, N}(frame, s, g, m, s == last_block)
     end
 end
@@ -94,10 +96,9 @@ Returns: DimensionMismatch in failed.
 sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("bad block size $s > $m"))
 
 """ Helper, gives a value of Nullable arrays inside Symmetric Tensor, at given
-tuple or array of multi indices
+tuple of multi indices
 """
-val{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Union{Tuple, Array{Int}}) =
-  st.frame[i...].value
+val{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
 
 """Produces a range of indices to determine the block.
 

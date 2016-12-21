@@ -63,7 +63,7 @@ facts("Reading Symmetric Tensors") do
   end
   context("val") do
     @fact val(test_dat, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
-    @fact val(test_dat, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
+    #@fact val(test_dat, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
   end
 end
 
