@@ -12,12 +12,13 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     bln::Int
     dats::Int
     sqr::Bool
-    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N}, test::Bool = true)
+    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N};
+       testdatstruct::Bool = true)
         s = size(frame[fill(1,N)...].value,1)
         g = size(frame, 1)
         last_block = size(frame[end].value, 1)
         m = s * (g-1) + last_block
-        if test
+        if testdatstruct
           frtest(frame, s, g)
         end
         new{T, N}(frame, s, g, m, s == last_block)
@@ -98,7 +99,7 @@ sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("bad block siz
 """ Helper, gives a value of Nullable arrays inside Symmetric Tensor, at given
 tuple of multi indices
 """
-val{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
+accessblock{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
 
 """Produces a range of indices to determine the block.
 
@@ -106,7 +107,7 @@ Input: i - block's number, s - block's size, n - data size.
 
 Returns: range.
 """
-seg(i::Int, s::Int, m::Int) = (i-1)*s+1 : ((i*s <= m)? i*s : m)
+ind2range(i::Int, s::Int, m::Int) = (i-1)*s+1 : ((i*s <= m)? i*s : m)
 
 """Converts super-symmetric array into blocks.
 
@@ -122,7 +123,7 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   q = ceil(Int, m/s)
   ret = NullableArray(Array{T, N}, fill(q, N)...)
   for writeind in indices(N, q)
-      @inbounds readind = map(k::Int -> seg(k, s, m), writeind)
+      @inbounds readind = map(k::Int -> ind2range(k, s, m), writeind)
       @inbounds ret[writeind...] = data[readind...]
   end
   SymmetricTensor(ret)
@@ -135,9 +136,9 @@ Imput: i - mulitiindex tuple, st: - SymmetricTensor
 
 Returns: Array
 """
-function readsegments(st::SymmetricTensor, i::Tuple)
+function accessst(st::SymmetricTensor, i::Tuple)
   ind = sortperm([i...])
-  permutedims(val(st, i[ind]), invperm(ind))
+  permutedims(accessblock(st, i[ind]), invperm(ind))
 end
 
 """Gives features of SymmetricTensor object
@@ -155,8 +156,8 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
   ret = zeros(T, fill(m, N)...)
     for i = 1:(g^N)
         @inbounds readind = ind2sub((fill(g, N)...), i)
-        @inbounds writeind = map(k -> seg(readind[k], s, m), 1:N)
-        @inbounds ret[writeind...] = readsegments(st, readind)
+        @inbounds writeind = map(k -> ind2range(readind[k], s, m), 1:N)
+        @inbounds ret[writeind...] = accessst(st, readind)
       end
   ret
 end
@@ -188,7 +189,7 @@ function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}.
   (r > 1)? testsize(st...):()
   ret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
-    @inbounds ret[i...] = op(map(k -> val(st[k], i), 1:r)...)
+    @inbounds ret[i...] = op(map(k -> accessblock(st[k], i), 1:r)...)
   end
   SymmetricTensor(ret)
 end
@@ -202,7 +203,7 @@ Returns single bs of the size of input bs
 function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}, num::Real)
   ret = similar(st.frame)
   for i in indices(N, st.bln)
-    @inbounds ret[i...] = op(val(st, i), num)
+    @inbounds ret[i...] = op(accessblock(st, i), num)
   end
   SymmetricTensor(ret)
 end

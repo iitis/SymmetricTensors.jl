@@ -4,7 +4,7 @@ using NullableArrays
 using Iterators
 using Combinatorics
 
-import SymmetricTensors: seg, val, indices, readsegments, issymetric, sizetest
+import SymmetricTensors: ind2range, accessblock, indices, accessst, issymetric, sizetest
 
 include("test_helpers/generate_data.jl")
 
@@ -27,7 +27,7 @@ facts("Helpers") do
   end
   context("indexing") do
     @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
-    @fact seg(2,3,5) --> 4:5
+    @fact ind2range(2,3,5) --> 4:5
   end
   context("sizetest") do
     @fact_throws DimensionMismatch, sizetest(2,3)
@@ -57,13 +57,12 @@ facts("Reading Symmetric Tensors") do
     @fact test1.sqr --> false
     @fact size(test_dat) --> (3,2,6)
   end
-  context("read segment") do
-    @fact readsegments(test_dat, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
-    @fact readsegments(test_dat, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
+  context("accesss SymmetricTensor object") do
+    @fact accessst(test_dat, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
+    @fact accessst(test_dat, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
   end
-  context("val") do
-    @fact val(test_dat, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
-    #@fact val(test_dat, [1,1,1]) --> srmat[1:3, 1:3, 1:3]
+  context("accessblock") do
+    @fact accessblock(test_dat, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
   end
 end
 
