@@ -1,6 +1,6 @@
 module SymmetricTensors
   using NullableArrays
-  import Base: +, -, *, .*, /, \, ./, size, convert
+  import Base: +, -, *, .*, /, \, ./, size, convert, getindex
 
   # Type implementation ond simple operations
   include("symmetrictensors.jl")

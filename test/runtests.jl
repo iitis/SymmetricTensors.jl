@@ -4,7 +4,7 @@ using NullableArrays
 using Iterators
 using Combinatorics
 
-import SymmetricTensors: ind2range, accessblock, indices, accessst, issymetric, sizetest
+import SymmetricTensors: ind2range, indices, accessst, issymetric, sizetest
 
 include("test_helpers/generate_data.jl")
 
@@ -44,9 +44,9 @@ facts("Converting") do
   end
   context("From SymmetricTensor to array") do
     @fact convert(Array, smseg) --> roughly(srmat)
-    @fact convert(smseg) --> roughly(srmat)
-    @fact convert([smseg1, smseg])[1] --> roughly([srmat1, srmat][1])
-    @fact convert([smseg1, smseg])[2] --> roughly([srmat1, srmat][2])
+    #@fact convert(smseg) --> roughly(srmat)
+    @fact convert(Array, [smseg1, smseg])[1] --> roughly([srmat1, srmat][1])
+    @fact convert(Array, [smseg1, smseg])[2] --> roughly([srmat1, srmat][2])
   end
 end
 
@@ -61,8 +61,8 @@ facts("Reading Symmetric Tensors") do
     @fact accessst(test_dat, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
     @fact accessst(test_dat, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
   end
-  context("accessblock") do
-    @fact accessblock(test_dat, (1,1,1)) --> srmat[1:3, 1:3, 1:3]
+  context("getindex") do
+    @fact test_dat[(1,1,1)] --> srmat[1:3, 1:3, 1:3]
   end
 end
 

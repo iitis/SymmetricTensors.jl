@@ -139,7 +139,7 @@ Returns: Array
 """
 function accessst(st::SymmetricTensor, i::Tuple)
   ind = sortperm([i...])
-  permutedims(accessblock(st, i[ind]), invperm(ind))
+  permutedims(st[i[ind]], invperm(ind))
 end
 
 """Gives features of SymmetricTensor object
@@ -162,11 +162,12 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
       end
   ret
 end
-convert{T<:AbstractFloat, N}(st::SymmetricTensor{T,N}) = convert(Array, st::SymmetricTensor{T,N})
+#convert{T<:AbstractFloat, N}(st::SymmetricTensor{T,N}) = convert(Array, st::SymmetricTensor{T,N})
 
 """Converts vector of Symmetric Tensors to vector of Arrays
 """
-convert{T<:AbstractFloat}(c::Vector{SymmetricTensor{T}}) = [convert(Array, c[i]) for i in 1:length(c)]
+convert{T<:AbstractFloat}(::Type{Array}, c::Vector{SymmetricTensor{T}}) = 
+[convert(Array, c[i]) for i in 1:length(c)]
 
 # ---- basic operations on Symmetric Tensors ----
 
@@ -190,7 +191,7 @@ function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}.
   (r > 1)? testsize(st...):()
   ret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
-    @inbounds ret[i...] = op(map(k -> accessblock(st[k], i), 1:r)...)
+    @inbounds ret[i...] = op(map(k -> st[k][i], 1:r)...)
   end
   SymmetricTensor(ret)
 end
@@ -204,7 +205,7 @@ Returns single bs of the size of input bs
 function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}, num::Real)
   ret = similar(st.frame)
   for i in indices(N, st.bln)
-    @inbounds ret[i...] = op(accessblock(st, i), num)
+    @inbounds ret[i...] = op(st[i], num)
   end
   SymmetricTensor(ret)
 end
