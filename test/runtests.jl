@@ -42,12 +42,6 @@ facts("Converting") do
     @fact test_dat.frame[2,2,2].value --> roughly(srmat[4:6, 4:6, 4:6])
     @fact isnull(test_dat.frame[2,1,1]) --> true
   end
-  context("From SymmetricTensor to array") do
-    @fact convert(Array, smseg) --> roughly(srmat)
-    #@fact convert(smseg) --> roughly(srmat)
-    @fact convert(Array, [smseg1, smseg])[1] --> roughly([srmat1, srmat][1])
-    @fact convert(Array, [smseg1, smseg])[2] --> roughly([srmat1, srmat][2])
-  end
 end
 
 facts("Reading Symmetric Tensors") do

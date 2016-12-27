@@ -148,7 +148,7 @@ input st - SymmetricTensor object
 
 Return: block's size, number of blocks, data size
 """
-size{T <: AbstractFloat, N}(st::SymmetricTensor{T, N}) = st.bls, st.bln, st.dats
+size(st::SymmetricTensor) = st.bls, st.bln, st.dats
 
 """Converts Symmetric Tensor object to Array
 """
@@ -162,18 +162,12 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
       end
   ret
 end
-#convert{T<:AbstractFloat, N}(st::SymmetricTensor{T,N}) = convert(Array, st::SymmetricTensor{T,N})
-
-"""Converts vector of Symmetric Tensors to vector of Arrays
-"""
-convert{T<:AbstractFloat}(::Type{Array}, c::Vector{SymmetricTensor{T}}) = 
-[convert(Array, c[i]) for i in 1:length(c)]
 
 # ---- basic operations on Symmetric Tensors ----
 
 """Tests if sizes on many  are the same
 """
-function testsize{T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...)
+function testsize(st::SymmetricTensor...)
   for i = 2:size(st,1)
     @inbounds size(st[1]) == size(st[i]) ||
     throw(DimensionMismatch("dims of B1 $(size(bt[1])) must equal dims of B$i $(size(bt[i]))"))
@@ -188,7 +182,7 @@ Returns single bs of the size of input bs
 """
 function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}...)
   r = size(st, 1)
-  (r > 1)? testsize(st...):()
+  # (r > 1)? testsize(st...):()
   ret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
     @inbounds ret[i...] = op(map(k -> st[k][i], 1:r)...)
