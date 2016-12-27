@@ -32,7 +32,7 @@ Input: A - tensor, n - mode of unfold.
 Returns: matrix.
 """
 function unfold(ar::Array, n::Int)
-    C = setdiff(1:ndims(ar), n)
+    C = [1:n-1; n+1:ndims(ar)]
     i = size(ar)
     k = prod(i[C])
     return reshape(permutedims(ar,[n; C]), i[n], k)
@@ -99,8 +99,9 @@ sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("bad block siz
 """ Helper, gives a value of Nullable arrays inside Symmetric Tensor, at given
 tuple of multi indices
 """
-accessblock{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
-
+# accessblock{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
+getindex(st::SymmetricTensor, i::Tuple) = st.frame[i...].value
+getindex(st::SymmetricTensor, i...) = st[i]
 """Produces a range of indices to determine the block.
 
 Input: i - block's number, s - block's size, n - data size.
