@@ -14,15 +14,18 @@ rmat2, srmat2, smseg2 = generatedata()
 rmat3, srmat3, smseg3 = generatedata(14)
 rmat4, srmat4, smseg4 = generatedata(15, 3)
 
-
 facts("Helpers") do
+  mat = [1. 2. ; 3. 4.];
+  context("symmetrise") do
+    @fact symmetrise(mat) --> [1.0  2.0; 2.0  4.0];
+  end
   A = reshape(collect(1.:8.), 2, 2, 2)
   context("unfold") do
     @fact unfold(A, 1) --> [[1. 3. 5. 7.]; [2. 4. 6. 8.]]
     @fact unfold(A, 2) --> [[1. 2. 5. 6.]; [3. 4. 7. 8.]]
     @fact unfold(A, 3) --> [[1. 2. 3. 4.]; [5. 6. 7. 8.]]
   end
-  context("symmetry") do
+  context("issymmetric") do
     A = reshape(collect(1.:8.), 2, 2, 2)
     @fact_throws AssertionError, issymetric(A)
     @fact issymetric(srmat) --> nothing

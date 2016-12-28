@@ -1,56 +1,62 @@
 # generate data for tests
 srand(42)
-
-
 """
-changes tensor into super symmetric using its pyramidal part
-axiliary function for data generation
+
+  symmetrise(m::Array)
+
+Returns array that is symmetric in all modes
+
+```jldoctest
+julia> A = [1. 2. ; 3. 4.];
+
+julia> symmetrise(A)
+2×2 Array{Float64,2}:
+ 1.0  2.0
+ 2.0  4.0
+```
 """
 function symmetrise(m::Array)
-  ret = zeros(m)
-  for i in product(fill(collect(1:size(m, 1)), ndims(m))...)
-    if issorted(i)
-      for k in collect(permutations(i))
-        ret[k...] = m[i...]
+  symarray = zeros(m)
+  for multind in product(fill(collect(1:size(m, 1)), ndims(m))...)
+    if issorted(multind)
+      for k in collect(permutations(multind))
+        symarray[k...] = m[multind...]
       end
     end
   end
-  ret
+  symarray
 end
 
-
 """
-generates 3 mode tensor of size n
 
-output:: array{Float64, 3}, super symmetric array, super symmetric array in
-block form
+  generatedata(dats::Int = 15, bls::Int = 4, dims::Int = 3)
+
+Returns array{dims},  symmetric array{dims}, symmetric array{dims} in
+Symmetric Tensors form
 """
-function generatedata(n::Int = 15, seg::Int = 4, N::Int = 3)
-    rmat = randn(fill(n, N)...)
-    srmat = symmetrise(rmat)
-    rmat, srmat, convert(SymmetricTensor, srmat, seg)
+function generatedata(dats::Int = 15, bls::Int = 4, dims::Int = 3)
+    rmat = randn(fill(dats, dims)...)
+    rmat, symmetrise(rmat), convert(SymmetricTensor, symmetrise(rmat), bls)
  end
 
 
 """
-generates exceptions for SymmetricTensor constructor tests
+Returns NullableArray of arrays generating exceptions on type constructor
 
-false, false - nullable array with non symmetric diagonal
-
-true - no nulls below diagonal [3,2,1]
-
-false, true - on block not squaerd [1,2,3]
+nonull_el = false, nonsq_box = false - nullable array with non symmetric diagonal
+nonull_el = true - no nulls below diagonal at index [3,2,1]
+nonull_el = false, nonsq_box = true - block at index [1,2,3] not squaerd
 """
  function create_except(dat::Array, nonull_el::Bool = false, nonsq_box::Bool = false)
- dims = ndims(dat)
-    structure = NullableArray(Array{Float64, dims}, fill(4, dims)...)
-    for i in product(fill(1:4, dims)...)
-       issorted(i)? structure[i...] = dat : ()
-    end
-    if nonull_el
-       structure[reverse(collect(1:dims))...] = dat
-    elseif nonsq_box
-       structure[collect(1:dims)...] = dat[1:2,:]
-    end
-    structure
+  dims = ndims(dat)
+  nullablearr = NullableArray(Array{Float64, dims}, fill(4, dims)...)
+  for i in product(fill(1:4, dims)...)
+    issorted(i)? nullablearr[i...] = dat : ()
+  end
+  if nonull_el
+    nullablearr[reverse(collect(1:dims))...] = dat
+  elseif nonsq_box
+    nullablearr[collect(1:dims)...] = dat[1:2,:]
+  end
+  nullablearr
 end
