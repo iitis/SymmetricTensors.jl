@@ -1,10 +1,10 @@
 """Type constructor
 
-Instances: frame - stroes arrays on nullable arrays
+frame - stroes nullable array of array
 bls - Int, size of ordinary block
 bln - Int, number of blocks
-datasize - Int, size od data stored (in each direction the same)
-sqr - Bool, is the last block size a same sa ordinary block size
+datasize - Int, size of data stored (in each direction the same)
+sqr - Bool, is the last block size a same as ordinary's block size
 """
 immutable SymmetricTensor{T <: AbstractFloat, N}
     frame::NullableArray{Array{T,N},N}
@@ -14,35 +14,59 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     sqr::Bool
     function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N};
        testdatstruct::Bool = true)
-        s = size(frame[fill(1,N)...].value,1)
-        g = size(frame, 1)
+        bls = size(frame[fill(1,N)...].value,1)
+        bln = size(frame, 1)
         last_block = size(frame[end].value, 1)
-        m = s * (g-1) + last_block
+        dats = bls * (bln-1) + last_block
         if testdatstruct
-          frtest(frame, s, g)
+          frtest(frame)
         end
-        new{T, N}(frame, s, g, m, s == last_block)
+        new{T, N}(frame, bls, bln, dats, bls == last_block)
     end
 end
 
-"""Unfold function.
-
-Input: A - tensor, n - mode of unfold.
-
-Returns: matrix.
 """
-function unfold(ar::Array, n::Int)
-    C = [1:n-1; n+1:ndims(ar)]
+  unfold(ar::Array{N}, mode::Int)
+
+Returns an matrix being an unfold of N dims array in given mode.
+
+```jldoctest
+julia> A = reshape(collect(1.:8.), 2, 2, 2);
+
+julia> unfold(A, 1)
+2×4 Array{Float64,2}:
+ 1.0  3.0  5.0  7.0
+ 2.0  4.0  6.0  8.0
+
+ julia> unfold(A, 2)
+ 2×4 Array{Float64,2}:
+  1.0  2.0  5.0  6.0
+  3.0  4.0  7.0  8.0
+
+  julia> unfold(A, 3)
+  2×4 Array{Float64,2}:
+   1.0  2.0  3.0  4.0
+   5.0  6.0  7.0  8.0
+```
+"""
+function unfold{T <: Real, N}(ar::Array{T,N}, mode::Int)
+    C = [1:mode-1; mode+1:N]
     i = size(ar)
     k = prod(i[C])
-    return reshape(permutedims(ar,[n; C]), i[n], k)
+    return reshape(permutedims(ar,[mode; C]), i[mode], k)
 end
 
-"""Tests if the array is symmetric for given tolerance.
+"""
+  issymetric(ar::Array{N}, atol::Float64)
 
-Input: array, atol - tolerance
+Returns: Assertion Error if not symmetric given a tolerance.
 
-Returns: Assertion Error if failed
+```jldoctest
+julia> A = reshape(collect(1.:8.), 2, 2, 2);
+
+julia> julia> issymetric(A)
+ERROR: AssertionError: not symmetric
+```
 """
 function issymetric{T <: AbstractFloat, N}(ar::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:N
@@ -50,175 +74,186 @@ function issymetric{T <: AbstractFloat, N}(ar::Array{T, N}, atol::Float64 = 1e-7
   end
 end
 
-"""Examines if data can be stored in SymmetricTensor form.
-
-Input: data - nullable array of arrays.
-
-Returns: Assertion error if: all sizes of nullable array not equal, at least
-  one undergiagonal block not null, at lest one (not last) block not squared,
-   at lest one diagonal block not symmetric.
 """
-function frtest{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N}, s::Int, g::Int)
-  all(collect(size(data)) .== g) || throw(AssertionError("frame not square"))
+  frtest(data::NullableArray{Array{N},N})
+
+Returns assertion error if: all sizes of nullable array not equal, at least
+  some undergiagonal block not null, some blocks (not last) not squared,
+   some diagonal blocks not symmetric.
+"""
+function frtest{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N})
+  bln = size(data, 1)
+  bls = size(data[fill(1,N)...].value,1)
+  all(collect(size(data)) .== bln) || throw(AssertionError("frame not square"))
   not_nulls = !data.isnull
   !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
   throw(AssertionError("underdiag. block not null"))
-  for i in indices(N, g-1)
-    @inbounds all(collect(size(data[i...].value)) .== s)|| throw(AssertionError("$i block not square"))
+  for i in indices(N, bln-1)
+    @inbounds all(collect(size(data[i...].value)) .== bls)||
+    throw(AssertionError("$i block not square"))
   end
-  for i=1:g
+  for i=1:bln
     @inbounds issymetric(data[fill(i, N)...].value)
   end
 end
 
-"""Generates the tuple of sorted indices.
-
-Input: N - size of the tuple, n - maximal index value.
-
-Return Ordered tuple of indices (a multi-index)
 """
-function indices(N::Int, m::Int)
-    ret = Tuple{fill(Int, N)...}[]
+  indices(dims::Int, tensize::Int)
+
+```jldoctest
+julia> indices(2,3)
+6-element Array{Tuple{Int64,Int64},1}:
+ (1,1)
+ (1,2)
+ (1,3)
+ (2,2)
+ (2,3)
+ (3,3)
+```
+"""
+function indices(dims::Int, tensize::Int)
+    multinds = Tuple{fill(Int,dims)...}[]
     @eval begin
-        @nloops $N i x -> (x==$N)? (1:$m): (i_{x+1}:$m) begin
-            @inbounds ind = @ntuple $N x -> i_{$N-x+1}
-            @inbounds push!($ret, ind)
+        @nloops $dims i x -> (x==$dims)? (1:$tensize): (i_{x+1}:$tensize) begin
+            @inbounds multind = @ntuple $dims x -> i_{$dims-x+1}
+            push!($multinds, multind)
         end
     end
-    ret
+    multinds
 end
 
-""" Tests the block size.
-
-Input: n - size of data, s - size of block.
-
-Returns: DimensionMismatch in failed.
-"""
-sizetest(m::Int, s::Int) = (m >= s > 0)|| throw(DimensionMismatch("bad block size $s > $m"))
-
-""" Helper, gives a value of Nullable arrays inside Symmetric Tensor, at given
-tuple of multi indices
-"""
-# accessblock{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}, i::Tuple) = st.frame[i...].value
-getindex(st::SymmetricTensor, i::Tuple) = st.frame[i...].value
-getindex(st::SymmetricTensor, i...) = st[i]
-"""Produces a range of indices to determine the block.
-
-Input: i - block's number, s - block's size, n - data size.
-
-Returns: range.
-"""
-ind2range(i::Int, s::Int, m::Int) = (i-1)*s+1 : ((i*s <= m)? i*s : m)
-
-"""Converts super-symmetric array into blocks.
-
-Input: data - Array{N}, s - size of block.
-
-Returns: Array{N} of blocks.
 """
 
-function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, s::Int = 2)
+    sizetest(dats::Int, bls::Int)
+
+Returns: DimensionMismatch if blocks size is grater than data size.
+
+```jldoctest
+julia> SymmetricTensors.sizetest(2,3)
+ERROR: DimensionMismatch("bad block size 3 > 2")
+```
+"""
+sizetest(dats::Int, bls::Int) =
+  (dats >= bls > 0)|| throw(DimensionMismatch("bad block size $bls > $dats"))
+
+"""
+  getindex(st::SymmetricTensor, i::Tuple)
+
+  Returns a block from Nullable Array of blocks stored in Symmetric Tensor type,
+  at given tuple of multi indices
+"""
+getindex(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...].value
+getindex(st::SymmetricTensor, mulind...) = st[mulind]
+
+"""
+
+    ind2range(i::Int, bls::Int, dats::Int)
+
+Returns a range given index i, size of a block and size of data
+
+```jldoctest
+julia> ind2range(2,3,5)
+4:5
+```
+"""
+ind2range(i::Int, bls::Int, dats::Int) = (i-1)*bls+1: ((i*bls <= dats)? i*bls: dats)
+
+"""
+  convert(::Type{SymmetricTensor}, data::Array{N}, bls::Int)
+
+Returns: data in SymmetricTensor form.
+```jldoctest
+julia> a = reshape(collect(1.:16.), 4, 4);
+
+julia> convert(SymmetricTensor, a*a')
+SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[276.0 304.0; 304.0 336.0]
+   [332.0 360.0; 368.0 400.0]; #NULL [404.0 440.0; 440.0 480.0]],2,2,4,true)
+```
+"""
+
+function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2)
   issymetric(data)
-  m = size(data,1)
-  sizetest(m, s)
-  q = ceil(Int, m/s)
-  ret = NullableArray(Array{T, N}, fill(q, N)...)
-  for writeind in indices(N, q)
-      @inbounds readind = map(k::Int -> ind2range(k, s, m), writeind)
-      @inbounds ret[writeind...] = data[readind...]
+  dats = size(data,1)
+  sizetest(dats, bls)
+  bln = ceil(Int, dats/bls)
+  symten = NullableArray(Array{T, N}, fill(bln, N)...)
+  for writeind in indices(N, bln)
+      readind = map(k::Int -> ind2range(k, bls, dats), writeind)
+      @inbounds symten[writeind...] = data[readind...]
   end
-  SymmetricTensor(ret)
+  SymmetricTensor(symten)
 end
 
-"""Reads a block, given multiindex If multiindex is not sorted,
-sorts it, finds a block and permutes dimentions of output.
-
-Imput: i - mulitiindex tuple, st: - SymmetricTensor
-
-Returns: Array
 """
-function accessst(st::SymmetricTensor, i::Tuple)
-  ind = sortperm([i...])
-  permutedims(st[i[ind]], invperm(ind))
+    accesnotord(st::SymmetricTensor, i::Tuple)
+
+Returns: particular Array from SymmetricTensor at given multi-index, especially
+if multi-inex is not sorted
+"""
+function accesnotord(st::SymmetricTensor, mulind::Tuple)
+  ind = sortperm([mulind...])
+  permutedims(st[mulind[ind]], invperm(ind))
 end
 
-"""Gives features of SymmetricTensor object
-
-input st - SymmetricTensor object
-
-Return: block's size, number of blocks, data size
 """
-size(st::SymmetricTensor) = st.bls, st.bln, st.dats
+  convert(::Type{Array}, st::SymmetricTensor{N})
 
-"""Converts Symmetric Tensor object to Array
+Return N dims array converted from SymmetricTensor type
+
 """
 function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
-  s, g , m = size(st)
-  ret = zeros(T, fill(m, N)...)
-    for i = 1:(g^N)
-        @inbounds readind = ind2sub((fill(g, N)...), i)
-        @inbounds writeind = map(k -> ind2range(readind[k], s, m), 1:N)
-        @inbounds ret[writeind...] = accessst(st, readind)
-      end
-  ret
+  array = zeros(T, fill(st.dats, N)...)
+  for i = 1:(st.bln^N)
+    readind = ind2sub((fill(st.bln, N)...), i)
+    writeind = map(k -> ind2range(readind[k], st.bls, st.dats), 1:N)
+    @inbounds array[writeind...] = accesnotord(st, readind)
+  end
+  array
 end
 
 # ---- basic operations on Symmetric Tensors ----
 
-"""Tests if sizes on many  are the same
 """
-function testsize(st::SymmetricTensor...)
-  for i = 2:size(st,1)
-    @inbounds size(st[1]) == size(st[i]) ||
-    throw(DimensionMismatch("dims of B1 $(size(bt[1])) must equal dims of B$i $(size(bt[i]))"))
-  end
-end
+  operation{N}(f::Function, st::SymmetricTensor{N}...)
 
-"""Elementwise opertation on many Symmetric Tensors objects
-
-Input op - opperation funtction,
-
-Returns single bs of the size of input bs
+Returns data in SymmetricTensor type after elementwise operation (f) of many
+ Symmetric Tensors
 """
-function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}...)
-  r = size(st, 1)
-  # (r > 1)? testsize(st...):()
-  ret = similar(st[1].frame)
+function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
+  narg = size(st, 1)
+  stret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
-    @inbounds ret[i...] = op(map(k -> st[k][i], 1:r)...)
+    @inbounds stret[i...] = f(map(k -> st[k][i], 1:narg)...)
   end
-  SymmetricTensor(ret)
+  SymmetricTensor(stret; testdatstruct = false)
 end
 
-"""elementwise opertation on bs and number
-
-input bs and number (Real)
-
-Returns single bs of the size of input bs
 """
-function operation{T<: AbstractFloat, N}(op::Function, st::SymmetricTensor{T,N}, num::Real)
-  ret = similar(st.frame)
-  for i in indices(N, st.bln)
-    @inbounds ret[i...] = op(st[i], num)
-  end
-  SymmetricTensor(ret)
-end
+  operation{N}(f::Function, st::SymmetricTensor{N}, num)
 
-operation(op::Function, a::Real, st::SymmetricTensor) = operation(op, st, a)
+Returns data in SymmetricTensor type after elementwise operation (f) of
+ Symmetric Tensor and number
+"""
+function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, num::Real)
+  stret = similar(st.frame)
+  for i in indices(N, st.bln)
+    @inbounds stret[i...] = f(st[i], num)
+  end
+  SymmetricTensor(stret; testdatstruct = false)
+end
 
 # implements simple operations on bs structure
 
-for op = (:+, :-, :.*, :./)
-  @eval ($op){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...) =
-  operation($op, st...)
+for f = (:+, :-, :.*, :./)
+  @eval ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...) = operation($f, st...)
 end
 
-for op = (:+, :-, :*, :/)
-  @eval ($op){T <: AbstractFloat, S <: Real}(st::SymmetricTensor{T}, n::S) =
-  operation($op, st, n)
+for f = (:+, :-, :*, :/)
+  @eval ($f){T <: AbstractFloat, S <: Real}(st::SymmetricTensor{T}, numb::S) =
+  operation($f, st, numb)
 end
 
-for op = (:+, :*)
-  @eval ($op){T <: AbstractFloat, S <: Real}(n::S, st::SymmetricTensor{T}) =
-  operation($op, st, n)
+for f = (:+, :*)
+  @eval ($f){T <: AbstractFloat, S <: Real}(numb::S, st::SymmetricTensor{T}) =
+  operation($f, st, numb)
 end
