@@ -1,8 +1,8 @@
 using FactCheck
 using SymmetricTensors
 using NullableArrays
-using Iterators
 using Combinatorics
+using Iterators
 
 import SymmetricTensors: ind2range, indices, accesnotord, issymetric, sizetest
 
