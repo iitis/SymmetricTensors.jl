@@ -74,7 +74,7 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 
 ## Operations 
 
-Following element-wise operations are supporter: +, -, *, .*, /, ./ between to `SymmetricTensors{T, N}` objects or `SymmetricTensors{T, N}` object and a number.
+Following element-wise operations `+, -, *, .*, /, ./` are supporter between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
 
 ## Axiliary function
 
