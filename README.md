@@ -67,10 +67,10 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 ## Fields
 
 - `frame::NullableArrays{Array{T, N}, N}`: stores data,
-- 'bls::Int': size of a block,
-- 'bln::Int': number of blocks,
-- `datas::Int': size of data,
-- `sqr::Bool~: is last block squared.
+- `bls::Int`: size of a block,
+- `bln::Int`: number of blocks,
+- `datas::Int`: size of data,
+- `sqr::Bool`: is last block squared.
 
 ## Operations 
 
