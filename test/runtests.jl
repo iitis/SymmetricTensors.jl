@@ -6,19 +6,8 @@ using Iterators
 
 import SymmetricTensors: ind2range, indices, accesnotord, issymetric, sizetest
 
-include("test_helpers/generate_data.jl")
-
-rmat, srmat, smseg = generatedata()
-rmat1, srmat1, smseg1 = generatedata(15, 5, 2)
-rmat2, srmat2, smseg2 = generatedata()
-rmat3, srmat3, smseg3 = generatedata(14)
-rmat4, srmat4, smseg4 = generatedata(15, 3)
 
 facts("Helpers") do
-  mat = [1. 2. ; 3. 4.];
-  context("symmetrise") do
-    @fact symmetrise(mat) --> [1.0  2.0; 2.0  4.0];
-  end
   A = reshape(collect(1.:8.), 2, 2, 2)
   context("unfold") do
     @fact unfold(A, 1) --> [[1. 3. 5. 7.]; [2. 4. 6. 8.]]
@@ -28,7 +17,7 @@ facts("Helpers") do
   context("issymmetric") do
     A = reshape(collect(1.:8.), 2, 2, 2)
     @fact_throws AssertionError, issymetric(A)
-    @fact issymetric(srmat) --> nothing
+    @fact issymetric([[1. 2.]; [2. 1.]]) --> nothing
   end
   context("indexing") do
     @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
@@ -39,73 +28,91 @@ facts("Helpers") do
   end
 end
 
-test_dat = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 3)
-test1 = convert(SymmetricTensor, srmat[1:6, 1:6, 1:6], 4)
-facts("Converting") do
-  context("Constructor tests") do
-    @fact test_dat.sqr --> true
-    @fact test1.sqr --> false
-    @fact test_dat.bls --> 3
-    @fact test_dat.bln --> 2
-    @fact test_dat.dats --> 6
+# generates symmetric tensors
+srand(42)
+t = zeros(7,7,7)
+t1 = zeros(7,7,7)
+for i in indices(3,7)
+  x1 = rand()
+  x2 = rand()
+  for j in collect(permutations(i))
+    t[j...] = x1
+    t1[j...] = x2
   end
-  context("From array to SymmetricTensor") do
+end
+
+
+facts("Converting") do
+  b = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 3)
+  context("Acessing Symmetric Tensors") do
+    @fact b[(1,1,1)] --> t[1:3, 1:3, 1:3]
+    @fact accesnotord(b, (2,1,2)) --> t[4:6, 1:3, 4:6]
+    @fact accesnotord(b, (2,1,1)) --> t[4:6, 1:3, 1:3]
+  end
+  context("converting from array to SymmetricTensor") do
     a = reshape(collect(1.:16.), 4, 4)
     @fact convert(SymmetricTensor, a*a')[1,1] -->  [276.0  304.0; 304.0  336.0]
-    @fact test_dat.frame[1,1,1].value --> roughly(srmat[1:3, 1:3, 1:3])
-    @fact test_dat.frame[1,2,2].value --> roughly(srmat[1:3, 4:6, 4:6])
-    @fact test_dat.frame[2,2,2].value --> roughly(srmat[4:6, 4:6, 4:6])
-    @fact isnull(test_dat.frame[2,1,1]) --> true
+    @fact b.frame[1,1,1].value --> roughly(t[1:3, 1:3, 1:3])
+    @fact b.frame[1,2,2].value --> roughly(t[1:3, 4:6, 4:6])
+    @fact b.frame[2,2,2].value --> roughly(t[4:6, 4:6, 4:6])
+    @fact isnull(b.frame[2,1,1]) --> true
+  end
+  context("Constructor tests") do
+    b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 4)
+    @fact b.sqr --> true
+    @fact b1.sqr --> false
+    @fact b.bls --> 3
+    @fact b.bln --> 2
+    @fact b.dats --> 6
   end
 end
 
-facts("Reading Symmetric Tensors") do
-  test1 = convert(SymmetricTensor, srmat[1:7, 1:7, 1:7], 3)
-  context("accesss SymmetricTensor object") do
-    @fact accesnotord(test_dat, (2,1,2)) --> srmat[4:6, 1:3, 4:6]
-    @fact accesnotord(test_dat, (2,1,1)) --> srmat[4:6, 1:3, 1:3]
-  end
-  context("getindex") do
-    @fact test_dat[(1,1,1)] --> srmat[1:3, 1:3, 1:3]
-  end
-end
 
 facts("Basic operations") do
-  context("Matrix--matrix elementwise operations") do
-    @fact convert(Array,smseg+smseg2) --> roughly(srmat+srmat2)
-    @fact convert(Array,smseg-smseg2) --> roughly(srmat-srmat2)
-    @fact convert(Array,smseg.*smseg2) --> roughly(srmat.*srmat2)
-    @fact convert(Array,smseg./smseg2) --> roughly(srmat./srmat2)
+  b = convert(SymmetricTensor, t)
+  b1 = convert(SymmetricTensor, t1)
+  context("Elementwise operations") do
+    @fact convert(Array,b+b1) --> roughly(t+t1)
+    @fact convert(Array,b-b1) --> roughly(t-t1)
+    @fact convert(Array,b.*b1) --> roughly(t.*t1)
+    @fact convert(Array,b./b1) --> roughly(t./t1)
   end
-
   context("Matrix--scalar operations") do
-    @fact convert(Array,smseg*2.1) -->roughly(srmat*2.1)
-    @fact convert(Array,smseg/2.1) -->roughly(srmat/2.1)
-    @fact convert(Array,smseg/2) -->roughly(srmat/2)
-    @fact convert(Array,smseg+2.1) -->roughly(srmat+2.1)
-    @fact convert(Array,smseg-2.1) -->roughly(srmat-2.1)
-    @fact convert(Array,smseg+2) -->roughly(srmat+2)
-    @fact convert(Array,2+smseg) -->roughly(srmat+2)
+    @fact convert(Array,b*2.1) -->roughly(t*2.1)
+    @fact convert(Array,b/2.1) -->roughly(t/2.1)
+    @fact convert(Array,b/2) -->roughly(t/2)
+    @fact convert(Array,b+2.1) -->roughly(t+2.1)
+    @fact convert(Array,b-2.1) -->roughly(t-2.1)
+    @fact convert(Array,b+2) -->roughly(t+2)
+    @fact convert(Array,2+b) -->roughly(t+2)
   end
 end
 
 facts("Exceptions") do
   context("Dimensions in operations") do
-    @fact_throws DimensionMismatch, smseg+smseg3
-    @fact_throws DimensionMismatch, smseg.*smseg3
-    @fact_throws DimensionMismatch, smseg+smseg4
-    @fact_throws DimensionMismatch, smseg.*smseg4
-    @fact_throws DimensionMismatch, smseg+convert(SymmetricTensor, srmat[1,:,:], 4)
+    b = convert(SymmetricTensor, t)
+    b1 = convert(SymmetricTensor, t, 3)
+    b2 = convert(SymmetricTensor, t[1:6, 1:6, 1:6])
+    b2 = convert(SymmetricTensor, t[:,:,1])
+    @fact_throws DimensionMismatch, b+b1
+    @fact_throws DimensionMismatch, b+b2
+    @fact_throws DimensionMismatch, b+b3
   end
 
   context("Constructor exceptions") do
-    @fact_throws AssertionError, SymmetricTensor(rmat)
-    @fact_throws AssertionError, SymmetricTensor(srmat[:, :, 1:2])
-    @fact_throws AssertionError, SymmetricTensor(create_except(rand(4,4,4)))
-    @fact_throws AssertionError, SymmetricTensor(create_except(srmat, false, true))
-    @fact_throws AssertionError, SymmetricTensor(create_except(srmat, true))
+    @fact_throws AssertionError, SymmetricTensor([1. 2.];[3. 4.])
+    @fact_throws AssertionError, SymmetricTensor(t[:, :, 1:2])
+    b = SymmetricTensor(t).frame
+    b1 = copy(b)
+    b2 = copy(b)
+    b[1,1,1] = reshape(collect(1:8), (2,2,2))
+    @fact_throws AssertionError, SymmetricTensor(b)
+    b1[1,2,3] = reshape(collect(1:4), (2,2,1))
+    @fact_throws AssertionError, SymmetricTensor(b1)
+    b2[3,2,1] = reshape(collect(1:8), (2,2,2))
+    @fact_throws AssertionError, SymmetricTensor(b2)
     # wrong block size
-    @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  25)
-    @fact_throws DimensionMismatch, convert(SymmetricTensor, srmat,  0)
+    @fact_throws DimensionMismatch, convert(SymmetricTensor, t,  25)
+    @fact_throws DimensionMismatch, convert(SymmetricTensor, t,  0)
   end
 end
