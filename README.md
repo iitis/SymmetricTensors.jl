@@ -1,5 +1,5 @@
 # SymmetricTensors.jl
-
+[![Build Status](https://travis-ci.org/kdomino/SymmetricTensors.jl.svg?branch=master)](https://travis-ci.org/kdomino/SymmetricTensors.jl)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
 without most of redundant repetitions. Uses blocks of `Array{T, N}` stored in `NullableArrays{Array{T, N}, N}` type "https://github.com/JuliaStats/NullableArrays.jl".
@@ -8,7 +8,7 @@ As of 01/01/2017 "https://github.com/kdomino" is the lead maintainer of this pac
 
 ## Installation
 
-Within Julia, just use run 
+Within Julia, just use run
 
 ```julia
 julia> Pkg.clone("https://github.com/kdomino/SymmetricTensors.jl")
@@ -72,7 +72,7 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 - `datas::Int`: size of data,
 - `sqr::Bool`: is last block squared.
 
-## Operations 
+## Operations
 
 Following element-wise operations `+, -, *, .*, /, ./` are supporter between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
 
