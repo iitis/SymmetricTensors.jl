@@ -3,7 +3,7 @@ module SymmetricTensors
   import Base: +, -, *, .*, /, ./, size, convert, getindex
 
   # Type implementation and simple operations
-  include("symmetrictensors.jl")
+  include("symmetrictensor.jl")
 
   export SymmetricTensor, convert, +, -, *, .*, /, ./, unfold
 end
