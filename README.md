@@ -5,14 +5,14 @@
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
 without most of redundant repetitions. Uses blocks of `Array{T, N}` stored in `NullableArrays{Array{T, N}, N}` type "https://github.com/JuliaStats/NullableArrays.jl".
 Repeating blocks are replaced by #null. The module introduces `SymmetricTensors{T, N}` type and some basic operations on this type.
-As of 01/01/2017 "https://github.com/kdomino" is the lead maintainer of this package.
+As of 01/01/2017 [@kdomino](https://github.com/kdomino) is the lead maintainer of this package.
 
 ## Installation
 
 Within Julia, just use run
 
 ```julia
-julia> Pkg.clone("https://github.com/kdomino/SymmetricTensors.jl")
+julia> Pkg.add("SymmetricTensors")
 ```
 
 to install the files.  Julia 0.5 or later required.
@@ -23,17 +23,17 @@ to install the files.  Julia 0.5 or later required.
 ```julia
 julia> data = 2×2 NullableArrays.NullableArray{Array{Float64,2},2}:
 [1.0 1.0; 1.0 1.0]  [1.0 1.0; 1.0 1.0]
-#NULL               [1.0 1.0; 1.0 1.0]
+NULL               [1.0 1.0; 1.0 1.0]
 
 julia> SymmetricTensor(data)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; #NULL [1.0 1.0; 1.0 1.0]],2,2,4,true)       
+SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]],2,2,4, true)       
 ```
 
 Without testing data symmetry and features
 
 ```julia
 julia> julia> SymmetricTensor(data; testdatstruct = false)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; #NULL [1.0 1.0; 1.0 1.0]],2,2,4,true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
 ```
 
 ## Converting
@@ -55,7 +55,7 @@ julia> data = ones(4,4)
 1.0  1.0  1.0  1.0
 
 julia> convert(SymmetricTensor, data, 2)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; #NULL [1.0 1.0; 1.0 1.0]],2,2,4,true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
 ```
 
 From `SymmetricTensors{T, N}` to `Array{T, N}`
@@ -75,14 +75,14 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 
 ## Operations
 
-Following element-wise operations `+, -, *, .*, /, ./` are supporter between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
+These element-wise operations: `+, -, *, .*, /, ./` are supporter between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
 
-## Axiliary function
+## Auxiliary function
 
 ```julia
 julia> unfold(data::Array{T,N}, mode::Int)
 ```
-unfolds array in a given mode
+unfolds `data` in a given mode
 
 ```julia
 julia> a = reshape(collect(1.:8.), (2,2,2))
