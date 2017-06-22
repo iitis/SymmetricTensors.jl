@@ -1,5 +1,5 @@
 # SymmetricTensors.jl
-[![Build Status](https://travis-ci.org/kdomino/SymmetricTensors.jl.svg?branch=master)](https://travis-ci.org/kdomino/SymmetricTensors.jl)
+[![Build Status](https://travis-ci.org/ZKSI/SymmetricTensors.jl.svg?branch=master)](https://travis-ci.org/ZKSI/SymmetricTensors.jl)
 [![Coverage Status](https://coveralls.io/repos/github/ZKSI/SymmetricTensors.jl/badge.svg?branch=master)](https://coveralls.io/github/ZKSI/SymmetricTensors.jl?branch=master)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
