@@ -111,7 +111,7 @@ julia> unfold(a, 3)
  5.0  6.0  7.0  8.0
 ```
 
-##Diagonal
+## Diagonal
 
 Returns a Vector{T}, of all super-diagonal elements of a SymmetricTensor.
 
