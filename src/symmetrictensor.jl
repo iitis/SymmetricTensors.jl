@@ -214,6 +214,29 @@ end
 # ---- basic operations on Symmetric Tensors ----
 
 """
+  diag(st::SymmetricTensor{N})
+
+Return vector of floats, the super-diag of st
+
+"""
+
+function diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N})
+    diagels = zeros(T, st.dats)
+    k = 1
+    for i in 1:st.bln
+      for j in 1:st.bls
+       @inbounds diagels[k] = st[fill(i, N)...][fill(j, N)...]
+       k += 1
+       if k > st.dats
+         return diagels
+       end
+      end
+    end
+  diagels
+end
+
+
+"""
   operation{N}(f::Function, st::SymmetricTensor{N}...)
 
 Returns data in SymmetricTensor type after elementwise operation (f) of many

@@ -31,7 +31,7 @@ SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0;
 Without testing data symmetry and features
 
 ```julia
-julia> julia> SymmetricTensor(data; testdatstruct = false)
+julia> SymmetricTensor(data; testdatstruct = false)
 SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; #NULL [1.0 1.0; 1.0 1.0]],2,2,4,true)
 ```
 
@@ -108,4 +108,22 @@ julia> unfold(a, 3)
 2×4 Array{Float64,2}:
  1.0  2.0  3.0  4.0
  5.0  6.0  7.0  8.0
+```
+
+##Diagonal
+
+Returns a Vector{T}, of all super-diagonal elements of a SymmetricTensor.
+
+```julia
+julia> data = ones(5,5,5,5);
+
+julia> st = convert(SymmetricTensor, data);
+
+julia> diag(st)
+5-element Array{Float64,1}:
+ 1.0
+ 1.0
+ 1.0
+ 1.0
+ 1.0
 ```

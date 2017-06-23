@@ -41,7 +41,6 @@ for i in indices(3,7)
   end
 end
 
-
 facts("Converting") do
   b = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 3)
   context("Acessing Symmetric Tensors") do
@@ -67,10 +66,13 @@ facts("Converting") do
   end
 end
 
-
 facts("Basic operations") do
   b = convert(SymmetricTensor, t)
   b1 = convert(SymmetricTensor, t1)
+  context("Get super-diagonal") do
+    @fact diag(b) --> roughly([t[fill(i,ndims(t))...] for i in 1:size(t,1)])
+    @fact diag(b1) --> roughly([t1[fill(i,ndims(t1))...] for i in 1:size(t1,1)])
+  end
   context("Elementwise operations") do
     @fact convert(Array,b+b1) --> roughly(t+t1)
     @fact convert(Array,b-b1) --> roughly(t-t1)
