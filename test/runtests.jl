@@ -16,7 +16,7 @@ facts("Helpers") do
   end
   context("issymmetric") do
     A = reshape(collect(1.:8.), 2, 2, 2)
-    @fact_throws AssertionError, issymetric(A)
+    @fact_throws AssertionError issymetric(A)
     @fact issymetric([[1. 2.]; [2. 1.]]) --> nothing
   end
   context("indexing") do
@@ -24,7 +24,7 @@ facts("Helpers") do
     @fact ind2range(2,3,5) --> 4:5
   end
   context("sizetest") do
-    @fact_throws DimensionMismatch, sizetest(2,3)
+    @fact_throws DimensionMismatch sizetest(2,3)
   end
 end
 
@@ -96,25 +96,25 @@ facts("Exceptions") do
     b1 = convert(SymmetricTensor, t, 3)
     b2 = convert(SymmetricTensor, t[1:6, 1:6, 1:6])
     b2 = convert(SymmetricTensor, t[:,:,1])
-    @fact_throws DimensionMismatch, b+b1
-    @fact_throws DimensionMismatch, b+b2
-    @fact_throws DimensionMismatch, b+b3
+    @fact_throws DimensionMismatch b+b1
+    @fact_throws MethodError b+b2
+    @fact_throws UndefVarError b+b3
   end
 
   context("Constructor exceptions") do
-    @fact_throws AssertionError, SymmetricTensor([1. 2.];[3. 4.])
-    @fact_throws AssertionError, SymmetricTensor(t[:, :, 1:2])
+    @fact_throws TypeError SymmetricTensor([1. 2.];[3. 4.])
+    @fact_throws DimensionMismatch SymmetricTensor(t[:, :, 1:2])
     b = SymmetricTensor(t).frame
     b1 = copy(b)
     b2 = copy(b)
     b[1,1,1] = reshape(collect(1:8), (2,2,2))
-    @fact_throws AssertionError, SymmetricTensor(b)
+    @fact_throws AssertionError SymmetricTensor(b)
     b1[1,2,3] = reshape(collect(1:4), (2,2,1))
-    @fact_throws AssertionError, SymmetricTensor(b1)
+    @fact_throws AssertionError SymmetricTensor(b1)
     b2[3,2,1] = reshape(collect(1:8), (2,2,2))
-    @fact_throws AssertionError, SymmetricTensor(b2)
+    @fact_throws AssertionError SymmetricTensor(b2)
     # wrong block size
-    @fact_throws DimensionMismatch, convert(SymmetricTensor, t,  25)
-    @fact_throws DimensionMismatch, convert(SymmetricTensor, t,  0)
+    @fact_throws DimensionMismatch convert(SymmetricTensor, t,  25)
+    @fact_throws DimensionMismatch convert(SymmetricTensor, t,  0)
   end
 end
