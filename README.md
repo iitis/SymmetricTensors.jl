@@ -3,8 +3,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/ZKSI/SymmetricTensors.jl/badge.svg?branch=master)](https://coveralls.io/github/ZKSI/SymmetricTensors.jl?branch=master)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
-without most of redundant repetitions. Uses blocks of `Array{T, N}` stored in `NullableArrays{Array{T, N}, N}` type "https://github.com/JuliaStats/NullableArrays.jl".
-Repeating blocks are replaced by #null. The module introduces `SymmetricTensors{T, N}` type and some basic operations on this type.
+without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `NullableArrays{Array{T, N}, N}` type "https://github.com/JuliaStats/NullableArrays.jl".
+Repeated blocks are replaced by #null. The module introduces `SymmetricTensors{T, N}` type and some basic operations on this type.
 As of 01/01/2017 [@kdomino](https://github.com/kdomino) is the lead maintainer of this package.
 
 ## Installation
@@ -15,7 +15,7 @@ Within Julia, just use run
 julia> Pkg.add("SymmetricTensors")
 ```
 
-to install the files.  Julia 0.5 or later required.
+to install the files. Julia 0.5 or later is required.
 
 
 ## Constructor
@@ -43,7 +43,7 @@ From `Array{T, N}` to `SymmetricTensors{T, N}`
 ```julia
 julia> convert(SymmetricTensors, data::Array{T, N}, bls::Int = 2)
 ```
-where bls is a size of a block
+where bls is the size of a block
 
 
 ```julia
@@ -70,12 +70,28 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 - `frame::NullableArrays{Array{T, N}, N}`: stores data,
 - `bls::Int`: size of a block,
 - `bln::Int`: number of blocks,
-- `datas::Int`: size of data,
-- `sqr::Bool`: is last block squared.
+- `dats::Int`: size of data,
+- `sqr::Bool`: shows if the last block is squared.
 
 ## Operations
 
-These element-wise operations: `+, -, *, .*, /, ./` are supporter between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
+These element-wise operations: `+, -, *, .*, /, ./` are supported between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
+
+The function diag returns a Vector{T}, of all super-diagonal elements of a SymmetricTensor.
+
+```julia
+julia> data = ones(5,5,5,5);
+
+julia> st = convert(SymmetricTensor, data);
+
+julia> diag(st)
+5-element Array{Float64,1}:
+ 1.0
+ 1.0
+ 1.0
+ 1.0
+ 1.0
+```
 
 ## Auxiliary function
 
@@ -109,22 +125,4 @@ julia> unfold(a, 3)
 2×4 Array{Float64,2}:
  1.0  2.0  3.0  4.0
  5.0  6.0  7.0  8.0
-```
-
-##Diagonal
-
-Returns a Vector{T}, of all super-diagonal elements of a SymmetricTensor.
-
-```julia
-julia> data = ones(5,5,5,5);
-
-julia> st = convert(SymmetricTensor, data);
-
-julia> diag(st)
-5-element Array{Float64,1}:
- 1.0
- 1.0
- 1.0
- 1.0
- 1.0
 ```
