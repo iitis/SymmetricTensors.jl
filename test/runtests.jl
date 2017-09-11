@@ -2,9 +2,10 @@ using FactCheck
 using SymmetricTensors
 using NullableArrays
 using Combinatorics
-using Iterators
+#using Iterators
 
-import SymmetricTensors: ind2range, indices, accesnotord, issymetric, sizetest
+import SymmetricTensors: ind2range, indices, issymetric, sizetest,
+ getblock, getblockunsafe
 
 
 facts("Helpers") do
@@ -42,27 +43,36 @@ for i in indices(3,7)
 end
 
 facts("Converting") do
-  b = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 3)
-  context("Acessing Symmetric Tensors") do
-    @fact b[(1,1,1)] --> t[1:3, 1:3, 1:3]
-    @fact accesnotord(b, (2,1,2)) --> t[4:6, 1:3, 4:6]
-    @fact accesnotord(b, (2,1,1)) --> t[4:6, 1:3, 1:3]
+  b = convert(SymmetricTensor, t, 3)
+  context("Geting blocks of Symmetric Tensors") do
+    @fact getblockunsafe(b, (1,1,1)) --> t[1:3, 1:3, 1:3]
+    @fact getblock(b, (2,1,2)) --> t[4:6, 1:3, 4:6]
+    @fact getblock(b, (2,1,1)) --> t[4:6, 1:3, 1:3]
+  end
+  context("Geting indices") do
+    @fact b[1,1,1] --> t[1,1,1]
+    @fact b[3,4,7] --> t[3,4,7]
+    @fact b[3,3,4] --> t[3,3,4]
+    @fact b[7,7,7] --> t[7,7,7]
+    @fact b[7,7,3] --> t[7,7,3]
+    @fact b[6,4,2] --> t[6,4,2]
   end
   context("converting from array to SymmetricTensor") do
     a = reshape(collect(1.:16.), 4, 4)
-    @fact convert(SymmetricTensor, a*a')[1,1] -->  [276.0  304.0; 304.0  336.0]
+    @fact getblockunsafe(convert(SymmetricTensor, a*a'),
+    (1,1)) -->  [276.0  304.0; 304.0  336.0]
     @fact b.frame[1,1,1].value --> roughly(t[1:3, 1:3, 1:3])
     @fact b.frame[1,2,2].value --> roughly(t[1:3, 4:6, 4:6])
     @fact b.frame[2,2,2].value --> roughly(t[4:6, 4:6, 4:6])
     @fact isnull(b.frame[2,1,1]) --> true
   end
   context("Constructor tests") do
-    b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 4)
-    @fact b.sqr --> true
-    @fact b1.sqr --> false
+    b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 2)
+    @fact b.sqr --> false
+    @fact b1.sqr --> true
     @fact b.bls --> 3
-    @fact b.bln --> 2
-    @fact b.dats --> 6
+    @fact b.bln --> 3
+    @fact b.dats --> 7
   end
 end
 

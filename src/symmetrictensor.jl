@@ -137,13 +137,28 @@ sizetest(dats::Int, bls::Int) =
   (dats >= bls > 0)|| throw(DimensionMismatch("bad block size $bls > $dats"))
 
 """
-  getindex(st::SymmetricTensor, i::Tuple)
+  getblockunsafe(st::SymmetricTensor, i::Tuple)
 
-  Returns a block from Nullable Array of blocks stored in Symmetric Tensor type,
-  at given tuple of multi indices
+Returns a block from Symmetric Tensor, unsafe works only if multi-index is sorted
 """
-getindex(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...].value
-getindex(st::SymmetricTensor, mulind...) = st[mulind]
+getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...].value
+
+"""
+    getblock(st::SymmetricTensor, i::Tuple)
+
+Returns a block from Symmetric Tensor, works for all multi-indices also not sorted
+"""
+function getblock(st::SymmetricTensor, mulind::Tuple)
+  ind = sortperm([mulind...])
+  permutedims(getblockunsafe(st, mulind[ind]), invperm(ind))
+end
+
+function getindex(st::SymmetricTensor, mulind::Int...)
+  b = st.bls
+  j = map(a -> div((a-1), b)+1, mulind)
+  i = map(a -> ((a-1)%b)+1, mulind)
+  getblock(st, j)[i...]
+end
 
 """
 
@@ -184,16 +199,6 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   SymmetricTensor(symten)
 end
 
-"""
-    accesnotord(st::SymmetricTensor, i::Tuple)
-
-Returns: particular Array from SymmetricTensor at given multi-index, especially
-if multi-inex is not sorted
-"""
-function accesnotord(st::SymmetricTensor, mulind::Tuple)
-  ind = sortperm([mulind...])
-  permutedims(st[mulind[ind]], invperm(ind))
-end
 
 """
   convert(::Type{Array}, st::SymmetricTensor{N})
@@ -206,7 +211,7 @@ function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
   for i = 1:(st.bln^N)
     readind = ind2sub((fill(st.bln, N)...), i)
     writeind = map(k -> ind2range(readind[k], st.bls, st.dats), 1:N)
-    @inbounds array[writeind...] = accesnotord(st, readind)
+    @inbounds array[writeind...] = getblock(st, readind)
   end
   array
 end
@@ -225,7 +230,7 @@ function diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N})
     k = 1
     for i in 1:st.bln
       for j in 1:st.bls
-       @inbounds diagels[k] = st[fill(i, N)...][fill(j, N)...]
+       @inbounds diagels[k] = getblockunsafe(st, (fill(i, N)...))[fill(j, N)...]
        k += 1
        if k > st.dats
          return diagels
@@ -246,7 +251,7 @@ function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}..
   narg = size(st, 1)
   stret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
-    @inbounds stret[i...] = f(map(k -> st[k][i], 1:narg)...)
+    @inbounds stret[i...] = f(map(k -> getblockunsafe(st[k], i), 1:narg)...)
   end
   SymmetricTensor(stret; testdatstruct = false)
 end
@@ -260,7 +265,7 @@ Returns data in SymmetricTensor type after elementwise operation (f) of
 function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, num::Real)
   stret = similar(st.frame)
   for i in indices(N, st.bln)
-    @inbounds stret[i...] = f(st[i], num)
+    @inbounds stret[i...] = f(getblockunsafe(st, i), num)
   end
   SymmetricTensor(stret; testdatstruct = false)
 end
