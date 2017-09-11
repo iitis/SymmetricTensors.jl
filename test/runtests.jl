@@ -2,10 +2,10 @@ using FactCheck
 using SymmetricTensors
 using NullableArrays
 using Combinatorics
-#using Iterators
+using Iterators
 
-import SymmetricTensors: ind2range, indices, issymetric, sizetest,
- getblock, getblockunsafe
+import SymmetricTensors: ind2range, indices, issymetric, sizetest,
+getblock, getblockunsafe
 
 
 facts("Helpers") do

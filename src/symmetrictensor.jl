@@ -190,7 +190,7 @@ function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, 
   issymetric(data)
   dats = size(data,1)
   sizetest(dats, bls)
-  bln = ceil(Int, dats/bls)
+  bln = mod(dats,bls)==0 ?  dats÷bls : dats÷bls + 1
   symten = NullableArray(Array{T, N}, fill(bln, N)...)
   for writeind in indices(N, bln)
       readind = map(k::Int -> ind2range(k, bls, dats), writeind)
@@ -225,20 +225,7 @@ Return vector of floats, the super-diag of st
 
 """
 
-function diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N})
-    diagels = zeros(T, st.dats)
-    k = 1
-    for i in 1:st.bln
-      for j in 1:st.bls
-       @inbounds diagels[k] = getblockunsafe(st, (fill(i, N)...))[fill(j, N)...]
-       k += 1
-       if k > st.dats
-         return diagels
-       end
-      end
-    end
-  diagels
-end
+diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}) = map(i->st[fill(i, N)...], 1:st.dats)
 
 
 """
