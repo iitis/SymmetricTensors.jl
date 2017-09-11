@@ -86,8 +86,8 @@ facts("Basic operations") do
   context("Elementwise operations") do
     @fact convert(Array,b+b1) --> roughly(t+t1)
     @fact convert(Array,b-b1) --> roughly(t-t1)
-    @fact convert(Array,b.*b1) --> roughly(t.*t1)
-    @fact convert(Array,b./b1) --> roughly(t./t1)
+    @fact convert(Array,b.*b1) --> roughly(broadcast(*, t, t1))
+    @fact convert(Array,b./b1) --> roughly(broadcast(/, t, t1))
   end
   context("Matrix--scalar operations") do
     @fact convert(Array,b*2.1) -->roughly(t*2.1)
@@ -110,7 +110,6 @@ facts("Exceptions") do
     @fact_throws MethodError b+b2
     @fact_throws UndefVarError b+b3
   end
-
   context("Constructor exceptions") do
     @fact_throws TypeError SymmetricTensor([1. 2.];[3. 4.])
     @fact_throws DimensionMismatch SymmetricTensor(t[:, :, 1:2])

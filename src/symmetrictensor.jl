@@ -70,7 +70,7 @@ ERROR: AssertionError: not symmetric
 """
 function issymetric{T <: AbstractFloat, N}(ar::Array{T, N}, atol::Float64 = 1e-7)
   for i=2:N
-     maximum(abs(unfold(ar, 1)-unfold(ar, i))) < atol ||throw(AssertionError("not symmetric"))
+     maximum(abs.(unfold(ar, 1)-unfold(ar, i))) < atol ||throw(AssertionError("not symmetric"))
   end
 end
 
@@ -85,8 +85,8 @@ function frtest{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N})
   bln = size(data, 1)
   bls = size(data[fill(1,N)...].value,1)
   all(collect(size(data)) .== bln) || throw(AssertionError("frame not square"))
-  not_nulls = !data.isnull
-  !any(map(x->!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
+  not_nulls = .!data.isnull
+  !any(map(x->.!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
   throw(AssertionError("underdiag. block not null"))
   for i in indices(N, bln-1)
     @inbounds all(collect(size(data[i...].value)) .== bls)||
@@ -242,6 +242,7 @@ function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}..
   end
   SymmetricTensor(stret; testdatstruct = false)
 end
+
 
 """
   operation{N}(f::Function, st::SymmetricTensor{N}, num)
