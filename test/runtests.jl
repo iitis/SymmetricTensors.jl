@@ -1,11 +1,9 @@
 using FactCheck
 using SymmetricTensors
 using NullableArrays
-using Combinatorics
-using Iterators
 
 import SymmetricTensors: ind2range, indices, issymetric, sizetest,
-getblock, getblockunsafe, broadcast
+getblock, getblockunsafe, broadcast, randsymarray
 
 
 facts("Helpers") do
@@ -24,6 +22,11 @@ facts("Helpers") do
     @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
     @fact ind2range(2,3,5) --> 4:5
   end
+  context("random generate of symmetric array") do
+    srand(40)
+    t = randsymarray(4, 2)
+    @fact t-transpose(t) --> zeros(4,4)
+  end
   context("sizetest") do
     @fact_throws DimensionMismatch sizetest(2,3)
   end
@@ -31,16 +34,9 @@ end
 
 # generates symmetric tensors
 srand(42)
-t = zeros(7,7,7)
-t1 = zeros(7,7,7)
-for i in indices(3,7)
-  x1 = rand()
-  x2 = rand()
-  for j in collect(permutations(i))
-    t[j...] = x1
-    t1[j...] = x2
-  end
-end
+t = randsymarray(7, 3)
+t1 = randsymarray(7, 3)
+
 
 facts("Converting") do
   b = convert(SymmetricTensor, t, 3)

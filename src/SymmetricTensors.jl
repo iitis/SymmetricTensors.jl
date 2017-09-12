@@ -2,10 +2,13 @@ VERSION >= v"0.5.0-dev+6521"
 
 module SymmetricTensors
   using NullableArrays
-  import Base: +, -, *, .*, /, ./, size, convert, getindex, diag, indices, broadcast
+  using Combinatorics
+  import Base: +, -, *, /, size, convert, getindex, diag, indices, broadcast, rand
 
   # Type implementation and simple operations
   include("symmetrictensor.jl")
+  #generates random SymmetricTensors
+  include("gendat.jl")
 
-  export SymmetricTensor, convert, +, -, *, .*, /, ./, unfold, diag
+  export SymmetricTensor, convert, +, -, *, /, unfold, diag, rand
 end

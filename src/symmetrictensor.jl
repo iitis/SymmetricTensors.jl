@@ -153,6 +153,12 @@ function getblock(st::SymmetricTensor, mulind::Tuple)
   permutedims(getblockunsafe(st, mulind[ind]), invperm(ind))
 end
 
+"""
+    getindex(st::SymmetricTensor, i::Tuple)
+
+Returns a Symmetric Tensor element for a given multi-index
+"""
+
 function getindex(st::SymmetricTensor, mulind::Int...)
   b = st.bls
   j = map(a -> div((a-1), b)+1, mulind)
