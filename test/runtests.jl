@@ -77,7 +77,7 @@ end
   s = rand(SymmetricTensor{Float64, 3}, 2)
   aa = convert(Array, s)
   tt = cat(3, [0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933])
-  #@test a ≈ t
+  @test aa ≈ tt atol=1.0e-5
   @test aa[:,:,1]-transpose(aa[:,:,1]) == zeros(2,2)
 end
 
@@ -108,10 +108,12 @@ end
 @testset "Exceptions" begin
   @testset "Dimensions in operations" begin
     b = convert(SymmetricTensor, t)
-    b1 = convert(SymmetricTensor, t, 3)
-    b2 = convert(SymmetricTensor, t[1:6, 1:6, 1:6])
+    b1 = convert(SymmetricTensor, t, 4)
+    b4 = convert(SymmetricTensor, t[1:4, 1:4, 1:4])
+    b5 = convert(SymmetricTensor, t[1:3, 1:3, 1:3])
     b2 = convert(SymmetricTensor, t[:,:,1])
     @test_throws DimensionMismatch b + b1
+    @test_throws DimensionMismatch b4 + b5
     @test_throws MethodError b + b2
     @test_throws UndefVarError b + b3
   end
