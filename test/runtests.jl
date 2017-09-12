@@ -23,13 +23,13 @@ getblock, getblockunsafe, broadcast, randsymarray
     @test indices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
     @test ind2range(2, 3, 5) == 4:5
   end
-  context("random generate of symmetric array") do
+  @testset "random generate of symmetric array" begin
     srand(40)
     t = randsymarray(4, 2)
-    @fact t-transpose(t) --> zeros(4,4)
+    @test (t-transpose(t)) == zeros(4,4)
   end
-  context("sizetest") do
-    @fact_throws DimensionMismatch sizetest(2,3)
+  @testset "sizetest" begin
+    @test_throws DimensionMismatch sizetest(2,3)
   end
 end
 
@@ -72,16 +72,16 @@ t1 = randsymarray(7, 3)
   end
 end
 
-facts("Random symmetric tensor generation") do
+@testset "Random symmetric tensor generation" begin
   srand(42)
   s = rand(SymmetricTensor{Float64, 3}, 2)
-  a = convert(Array, s)
-  t = cat(3, [0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933])
-  @fact a --> roughly(t, 1e-5)
-  @fact a[:,:,1]-transpose(a[:,:,1]) --> zeros(2,2)
+  aa = convert(Array, s)
+  tt = cat(3, [0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933])
+  #@test a ≈ t
+  @test aa[:,:,1]-transpose(aa[:,:,1]) == zeros(2,2)
 end
 
-facts("Basic operations") do
+@testset "Basic operations" begin
   b = convert(SymmetricTensor, t)
   b1 = convert(SymmetricTensor, t1)
   @testset "Get super-diagonal" begin
