@@ -260,7 +260,7 @@ function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}..
   narg = size(st, 1)
   stret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
-    @inbounds stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
+    stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
   end
   SymmetricTensor(stret; testdatstruct = false)
 end
