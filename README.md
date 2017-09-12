@@ -15,7 +15,7 @@ Within Julia, just use run
 julia> Pkg.add("SymmetricTensors")
 ```
 
-to install the files. Julia 0.5 or later is required.
+to install the files. Julia 0.6 or later is required.
 
 
 ## Constructor
@@ -26,7 +26,7 @@ julia> data = 2×2 NullableArrays.NullableArray{Array{Float64,2},2}:
 NULL               [1.0 1.0; 1.0 1.0]
 
 julia> SymmetricTensor(data)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]],2,2,4, true)       
+SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]],2,2,4, true)
 ```
 
 Without testing data symmetry and features
