@@ -269,7 +269,15 @@ end
 # implements simple operations on bs structure
 
 for f = (:+, :-)
-  @eval ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...) = broadcast($f, st...)
+  @eval function ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...)
+    dats = st[1].dats
+    for s in st
+      if s.dats != dats
+        throw(DimensionMismatch("dimensions must match"))
+      end
+    end
+    broadcast($f, st...)
+  end
 end
 
 
