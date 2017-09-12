@@ -1,31 +1,32 @@
-using FactCheck
+using Base.Test
+
 using SymmetricTensors
 using NullableArrays
 using Combinatorics
-using Iterators
+using IterTools
 
 import SymmetricTensors: ind2range, indices, issymetric, sizetest,
-getblock, getblockunsafe, broadcast
+getblock, getblockunsafe
 
 
-facts("Helpers") do
+@testset "Helpers" begin
   A = reshape(collect(1.:8.), 2, 2, 2)
-  context("unfold") do
-    @fact unfold(A, 1) --> [[1. 3. 5. 7.]; [2. 4. 6. 8.]]
-    @fact unfold(A, 2) --> [[1. 2. 5. 6.]; [3. 4. 7. 8.]]
-    @fact unfold(A, 3) --> [[1. 2. 3. 4.]; [5. 6. 7. 8.]]
+  @testset "unfold" begin
+    @test unfold(A, 1) == [[1.0 3.0 5.0 7.0]; [2.0 4.0 6.0 8.0]]
+    @test unfold(A, 2) == [[1.0 2.0 5.0 6.0]; [3.0 4.0 7.0 8.0]]
+    @test unfold(A, 3) == [[1.0 2.0 3.0 4.0]; [5.0 6.0 7.0 8.0]]
   end
-  context("issymmetric") do
+  @testset "issymmetric" begin
     A = reshape(collect(1.:8.), 2, 2, 2)
-    @fact_throws AssertionError issymetric(A)
-    @fact issymetric([[1. 2.]; [2. 1.]]) --> nothing
+    @test_throws AssertionError issymetric(A)
+    @test issymetric([[1.0 2.0]; [2.0 1.0]]) == nothing
   end
-  context("indexing") do
-    @fact indices(2,3) --> [(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)]
-    @fact ind2range(2,3,5) --> 4:5
+  @testset "indexing" begin
+    @test indices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
+    @test ind2range(2, 3, 5) == 4:5
   end
-  context("sizetest") do
-    @fact_throws DimensionMismatch sizetest(2,3)
+  @testset "sizetest" begin
+    @test_throws DimensionMismatch sizetest(2, 3)
   end
 end
 
@@ -42,91 +43,87 @@ for i in indices(3,7)
   end
 end
 
-facts("Converting") do
+@testset "Converting" begin
   b = convert(SymmetricTensor, t, 3)
-  context("Geting blocks of Symmetric Tensors") do
-    @fact getblockunsafe(b, (1,1,1)) --> t[1:3, 1:3, 1:3]
-    @fact getblock(b, (2,1,2)) --> t[4:6, 1:3, 4:6]
-    @fact getblock(b, (2,1,1)) --> t[4:6, 1:3, 1:3]
+  @testset "Geting blocks of Symmetric Tensors" begin
+    @test getblockunsafe(b, (1, 1, 1)) == t[1:3, 1:3, 1:3]
+    @test getblock(b, (2, 1, 2)) == t[4:6, 1:3, 4:6]
+    @test getblock(b, (2, 1, 1)) == t[4:6, 1:3, 1:3]
   end
-  context("Geting indices") do
-    @fact b[1,1,1] --> t[1,1,1]
-    @fact b[3,4,7] --> t[3,4,7]
-    @fact b[3,3,4] --> t[3,3,4]
-    @fact b[7,7,7] --> t[7,7,7]
-    @fact b[7,7,3] --> t[7,7,3]
-    @fact b[6,4,2] --> t[6,4,2]
+  @testset "Geting indices" begin
+    @test b[1, 1, 1] == t[1, 1, 1]
+    @test b[3, 4, 7] == t[3, 4, 7]
+    @test b[3, 3, 4] == t[3, 3, 4]
+    @test b[7, 7, 7] == t[7, 7, 7]
+    @test b[7, 7, 3] == t[7, 7, 3]
+    @test b[6, 4, 2] == t[6, 4, 2]
   end
-  context("converting from array to SymmetricTensor") do
+  @testset "converting from array to SymmetricTensor" begin
     a = reshape(collect(1.:16.), 4, 4)
-    @fact getblockunsafe(convert(SymmetricTensor, a*a'),
-    (1,1)) -->  [276.0  304.0; 304.0  336.0]
-    @fact b.frame[1,1,1].value --> roughly(t[1:3, 1:3, 1:3])
-    @fact b.frame[1,2,2].value --> roughly(t[1:3, 4:6, 4:6])
-    @fact b.frame[2,2,2].value --> roughly(t[4:6, 4:6, 4:6])
-    @fact isnull(b.frame[2,1,1]) --> true
+    @test getblockunsafe(convert(SymmetricTensor, a*a'), (1,1)) ==  [276.0  304.0; 304.0  336.0]
+    @test b.frame[1, 1, 1].value ≈ t[1:3, 1:3, 1:3]
+    @test b.frame[1, 2, 2].value ≈ t[1:3, 4:6, 4:6]
+    @test b.frame[2, 2, 2].value ≈ t[4:6, 4:6, 4:6]
+    @test isnull(b.frame[2, 1, 1])
   end
-  context("Constructor tests") do
+  @testset "Constructor tests" begin
     b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 2)
-    @fact b.sqr --> false
-    @fact b1.sqr --> true
-    @fact b.bls --> 3
-    @fact b.bln --> 3
-    @fact b.dats --> 7
+    @test !(b.sqr)
+    @test b1.sqr
+    @test b.bls == 3
+    @test b.bln == 3
+    @test b.dats == 7
   end
 end
 
-facts("Basic operations") do
+@testset "Basic operations" begin
   b = convert(SymmetricTensor, t)
   b1 = convert(SymmetricTensor, t1)
-  context("Get super-diagonal") do
-    @fact diag(b) --> roughly([t[fill(i,ndims(t))...] for i in 1:size(t,1)])
-    @fact diag(b1) --> roughly([t1[fill(i,ndims(t1))...] for i in 1:size(t1,1)])
+  @testset "Get super-diagonal" begin
+    @test diag(b) ≈ [t[fill(i, ndims(t))...] for i = 1:size(t, 1)]
+    @test diag(b1) ≈ [t1[fill(i, ndims(t1))...] for i = 1:size(t1, 1)]
   end
-  context("Elementwise operations") do
-    @fact convert(Array,b+b1) --> roughly(t+t1)
-    @fact convert(Array,b-b1) --> roughly(t-t1)
-    @fact convert(Array, broadcast(+, b, b1)) --> roughly(t+t1)
-    @fact convert(Array, broadcast(*, b, b1)) --> roughly(broadcast(*, t, t1))
-    @fact convert(Array, broadcast(/, b, b1)) --> roughly(broadcast(/, t, t1))
+  @testset "Elementwise operations" begin
+    @test convert(Array, b + b1) ≈ t + t1
+    @test convert(Array, b - b1) ≈ t - t1
+    @test convert(Array, b .* b1) ≈ broadcast(*, t, t1)
+    @test convert(Array, b ./ b1) ≈ broadcast(/, t, t1)
   end
-  context("Matrix--scalar operations") do
-    @fact convert(Array,b*2.1) -->roughly(t*2.1)
-    @fact convert(Array,b/2.1) -->roughly(t/2.1)
-    @fact convert(Array,b/2) -->roughly(t/2)
-    @fact convert(Array,b+2.1) -->roughly(t+2.1)
-    @fact convert(Array,b-2.1) -->roughly(t-2.1)
-    @fact convert(Array,b+2) -->roughly(t+2)
-    @fact convert(Array,2+b) -->roughly(t+2)
-    @fact convert(Array,broadcast(+, b, 3)) -->roughly(t+3)
-    @fact convert(Array,broadcast(+, 3, b)) -->roughly(t+3)
+  @testset "Matrix--scalar operations" begin
+    @test convert(Array, b * 2.1) ≈ t * 2.1
+    @test convert(Array, b / 2.1) ≈ t / 2.1
+    @test convert(Array, b / 2) ≈ t / 2
+    @test convert(Array, b + 2.1) ≈ t + 2.1
+    @test convert(Array, b - 2.1) ≈ t - 2.1
+    @test convert(Array, b + 2) ≈ t + 2
+    @test convert(Array, 2 + b) ≈ t + 2
   end
 end
 
-facts("Exceptions") do
-  context("Dimensions in operations") do
+@testset "Exceptions" begin
+  @testset "Dimensions in operations" begin
     b = convert(SymmetricTensor, t)
     b1 = convert(SymmetricTensor, t, 3)
     b2 = convert(SymmetricTensor, t[1:6, 1:6, 1:6])
     b2 = convert(SymmetricTensor, t[:,:,1])
-    @fact_throws DimensionMismatch b+b1
-    @fact_throws MethodError b+b2
-    @fact_throws UndefVarError b+b3
+    @test_throws DimensionMismatch b + b1
+    @test_throws MethodError b + b2
+    @test_throws UndefVarError b + b3
   end
-  context("Constructor exceptions") do
-    @fact_throws TypeError SymmetricTensor([1. 2.];[3. 4.])
-    @fact_throws DimensionMismatch SymmetricTensor(t[:, :, 1:2])
+  @testset "Constructor exceptions" begin
+    @test_throws TypeError SymmetricTensor([1.0 2.0]; [3.0 4.0])
+    @test_throws DimensionMismatch SymmetricTensor(t[:, :, 1:2])
     b = SymmetricTensor(t).frame
     b1 = copy(b)
     b2 = copy(b)
     b[1,1,1] = reshape(collect(1:8), (2,2,2))
-    @fact_throws AssertionError SymmetricTensor(b)
+    @test_throws AssertionError SymmetricTensor(b)
     b1[1,2,3] = reshape(collect(1:4), (2,2,1))
-    @fact_throws AssertionError SymmetricTensor(b1)
+    @test_throws AssertionError SymmetricTensor(b1)
     b2[3,2,1] = reshape(collect(1:8), (2,2,2))
-    @fact_throws AssertionError SymmetricTensor(b2)
+    @test_throws AssertionError SymmetricTensor(b2)
     # wrong block size
-    @fact_throws DimensionMismatch convert(SymmetricTensor, t,  25)
-    @fact_throws DimensionMismatch convert(SymmetricTensor, t,  0)
+    @test_throws DimensionMismatch convert(SymmetricTensor, t, 25)
+    @test_throws DimensionMismatch convert(SymmetricTensor, t, 0)
   end
 end
