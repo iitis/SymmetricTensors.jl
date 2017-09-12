@@ -72,6 +72,15 @@ facts("Converting") do
   end
 end
 
+facts("Random symmetric tensor generation") do
+  srand(42)
+  s = rand(SymmetricTensor{Float64, 3}, 2)
+  a = convert(Array, s)
+  t = cat(3, [0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933])
+  @fact a --> roughly(t, 1e-5)
+  @fact a[:,:,1]-transpose(a[:,:,1]) --> zeros(2,2)
+end
+
 facts("Basic operations") do
   b = convert(SymmetricTensor, t)
   b1 = convert(SymmetricTensor, t1)

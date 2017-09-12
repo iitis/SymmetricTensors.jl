@@ -94,6 +94,15 @@ julia> diag(st)
  1.0
 ```
 
+## Random Symmetric Ternsor generation
+
+To generate random Symmetric Tensor just use `rand(SymmetricTensor{T, N}, dats::Int, bls::Int = 2)`.
+
+```julia
+julia> rand(SymmetricTensor{Float64, 2}, 2)
+SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[0.587331 0.704768; 0.704768 0.836633]], 2, 1, 2, true)
+```
+
 ## Auxiliary function
 
 ```julia

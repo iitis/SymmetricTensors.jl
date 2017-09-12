@@ -8,7 +8,7 @@ module SymmetricTensors
   # Type implementation and simple operations
   include("symmetrictensor.jl")
   #generates random SymmetricTensors
-  include("gendat.jl")
+  include("randgendat.jl")
 
   export SymmetricTensor, convert, +, -, *, /, unfold, diag, rand
 end
