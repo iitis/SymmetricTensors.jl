@@ -75,7 +75,8 @@ julia> convert(Array, data::SymmetricTensors{T, N})
 
 ## Operations
 
-These element-wise operations: `+, -, *, .*, /, ./` are supported between two `SymmetricTensors{T, N}` objects or a `SymmetricTensors{T, N}` object and a number.
+Addition and substraction: `+, -` is supported between two `SymmetricTensors{T, N}`. Addition substraction multiplication and division `+, -, *, /`
+is supported between `SymmetricTensors{T, N}` and a number. For elementwise operation `f` between many `SymmetricTensors{T, N}` use `broadcast(f::Function, st::SymmetricTensors{T, N}...)`
 
 The function diag returns a Vector{T}, of all super-diagonal elements of a SymmetricTensor.
 

@@ -2,7 +2,7 @@ VERSION >= v"0.5.0-dev+6521"
 
 module SymmetricTensors
   using NullableArrays
-  import Base: +, -, *, .*, /, ./, size, convert, getindex, diag, indices
+  import Base: +, -, *, .*, /, ./, size, convert, getindex, diag, indices, broadcast
 
   # Type implementation and simple operations
   include("symmetrictensor.jl")

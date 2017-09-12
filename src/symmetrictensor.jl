@@ -229,28 +229,12 @@ diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}) = map(i->st[fill(i, N)...],
 
 
 """
-  operation{N}(f::Function, st::SymmetricTensor{N}...)
-
-Returns data in SymmetricTensor type after elementwise operation (f) of many
- Symmetric Tensors
-"""
-function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
-  narg = size(st, 1)
-  stret = similar(st[1].frame)
-  for i in indices(N, st[1].bln)
-    @inbounds stret[i...] = f(map(k -> getblockunsafe(st[k], i), 1:narg)...)
-  end
-  SymmetricTensor(stret; testdatstruct = false)
-end
-
-
-"""
-  operation{N}(f::Function, st::SymmetricTensor{N}, num)
+  broadcast{N}(f::Function, st::SymmetricTensor{N}, num)
 
 Returns data in SymmetricTensor type after elementwise operation (f) of
  Symmetric Tensor and number
 """
-function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, num::Real)
+function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, num::Real)
   stret = similar(st.frame)
   for i in indices(N, st.bln)
     @inbounds stret[i...] = f(getblockunsafe(st, i), num)
@@ -258,18 +242,37 @@ function operation{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, 
   SymmetricTensor(stret; testdatstruct = false)
 end
 
+broadcast{T<: AbstractFloat, N}(f::Function, num::Real, st::SymmetricTensor{T,N}) = broadcast(f, st, num)
+
+"""
+  broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
+
+Returns the elementwise operation, the overload of
+crodcast function from Base
+"""
+function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
+  narg = size(st, 1)
+  stret = similar(st[1].frame)
+  for i in indices(N, st[1].bln)
+    @inbounds stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
+  end
+  SymmetricTensor(stret; testdatstruct = false)
+end
+
+
 # implements simple operations on bs structure
 
-for f = (:+, :-, :.*, :./)
-  @eval ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...) = operation($f, st...)
+for f = (:+, :-)
+  @eval ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...) = broadcast($f, st...)
 end
+
 
 for f = (:+, :-, :*, :/)
   @eval ($f){T <: AbstractFloat, S <: Real}(st::SymmetricTensor{T}, numb::S) =
-  operation($f, st, numb)
+  broadcast($f, st, numb)
 end
 
 for f = (:+, :*)
   @eval ($f){T <: AbstractFloat, S <: Real}(numb::S, st::SymmetricTensor{T}) =
-  operation($f, st, numb)
+  broadcast($f, numb, st)
 end

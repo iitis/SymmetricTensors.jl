@@ -5,7 +5,7 @@ using Combinatorics
 using Iterators
 
 import SymmetricTensors: ind2range, indices, issymetric, sizetest,
-getblock, getblockunsafe
+getblock, getblockunsafe, broadcast
 
 
 facts("Helpers") do
@@ -86,8 +86,9 @@ facts("Basic operations") do
   context("Elementwise operations") do
     @fact convert(Array,b+b1) --> roughly(t+t1)
     @fact convert(Array,b-b1) --> roughly(t-t1)
-    @fact convert(Array,b.*b1) --> roughly(broadcast(*, t, t1))
-    @fact convert(Array,b./b1) --> roughly(broadcast(/, t, t1))
+    @fact convert(Array, broadcast(+, b, b1)) --> roughly(t+t1)
+    @fact convert(Array, broadcast(*, b, b1)) --> roughly(broadcast(*, t, t1))
+    @fact convert(Array, broadcast(/, b, b1)) --> roughly(broadcast(/, t, t1))
   end
   context("Matrix--scalar operations") do
     @fact convert(Array,b*2.1) -->roughly(t*2.1)
@@ -97,6 +98,8 @@ facts("Basic operations") do
     @fact convert(Array,b-2.1) -->roughly(t-2.1)
     @fact convert(Array,b+2) -->roughly(t+2)
     @fact convert(Array,2+b) -->roughly(t+2)
+    @fact convert(Array,broadcast(+, b, 3)) -->roughly(t+3)
+    @fact convert(Array,broadcast(+, 3, b)) -->roughly(t+3)
   end
 end
 
