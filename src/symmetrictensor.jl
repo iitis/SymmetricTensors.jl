@@ -12,8 +12,8 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     bln::Int
     dats::Int
     sqr::Bool
-    function (::Type{SymmetricTensor}){T, N}(frame::NullableArray{Array{T,N},N};
-       testdatstruct::Bool = true)
+    function (::Type{SymmetricTensor})(frame::NullableArray{Array{T,N},N};
+       testdatstruct::Bool = true) where {T, N}
         bls = size(frame[fill(1,N)...].value,1)
         bln = size(frame, 1)
         last_block = size(frame[end].value, 1)
@@ -24,6 +24,7 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
         new{T, N}(frame, bls, bln, dats, bls == last_block)
     end
 end
+
 
 """
   unfold(ar::Array{N}, mode::Int)
@@ -49,12 +50,13 @@ julia> unfold(A, 1)
    5.0  6.0  7.0  8.0
 ```
 """
-function unfold{T <: Real, N}(ar::Array{T,N}, mode::Int)
+function unfold(ar::Array{T,N}, mode::Int) where {T <: Real, N}
     C = [1:mode-1; mode+1:N]
     i = size(ar)
     k = prod(i[C])
     return reshape(permutedims(ar,[mode; C]), i[mode], k)
 end
+
 
 """
   issymetric(ar::Array{N}, atol::Float64)
@@ -68,7 +70,7 @@ julia> julia> issymetric(A)
 ERROR: AssertionError: not symmetric
 ```
 """
-function issymetric{T <: AbstractFloat, N}(ar::Array{T, N}, atol::Float64 = 1e-7)
+function issymetric(ar::Array{T, N}, atol::Float64 = 1e-7) where {T <: AbstractFloat, N}
   for i=2:N
      maximum(abs.(unfold(ar, 1)-unfold(ar, i))) < atol ||throw(AssertionError("not symmetric"))
   end
@@ -81,7 +83,7 @@ Returns assertion error if: all sizes of nullable array not equal, at least
   some undergiagonal block not null, some blocks (not last) not squared,
    some diagonal blocks not symmetric.
 """
-function frtest{T <: AbstractFloat, N}(data::NullableArray{Array{T,N},N})
+function frtest(data::NullableArray{Array{T,N},N}) where {T <: AbstractFloat, N}
   bln = size(data, 1)
   bls = size(data[fill(1,N)...].value,1)
   all(collect(size(data)) .== bln) || throw(AssertionError("frame not square"))
@@ -192,7 +194,7 @@ SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[276.0 304.0; 304.0 336.0]
 ```
 """
 
-function convert{T <: AbstractFloat, N}(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2)
+function convert(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2) where {T <: AbstractFloat, N}
   issymetric(data)
   dats = size(data,1)
   sizetest(dats, bls)
@@ -212,7 +214,7 @@ end
 Return N dims array converted from SymmetricTensor type
 
 """
-function convert{T<:AbstractFloat, N}(::Type{Array}, st::SymmetricTensor{T,N})
+function convert(::Type{Array}, st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
   array = zeros(T, fill(st.dats, N)...)
   for i = 1:(st.bln^N)
     readind = ind2sub((fill(st.bln, N)...), i)
@@ -231,16 +233,16 @@ Return vector of floats, the super-diag of st
 
 """
 
-diag{T<: AbstractFloat, N}(st::SymmetricTensor{T,N}) = map(i->st[fill(i, N)...], 1:st.dats)
+diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...], 1:st.dats)
 
 
 """
-  broadcast{N}(f::Function, st::SymmetricTensor{N}, num)
+  broadcast(f::Function, st::SymmetricTensor{N}, num)
 
 Returns data in SymmetricTensor type after elementwise operation (f) of
  Symmetric Tensor and number
 """
-function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, num::Real)
+function broadcast(f::Function, st::SymmetricTensor{T,N}, num::Real) where {T<: AbstractFloat, N}
   stret = similar(st.frame)
   for i in indices(N, st.bln)
     @inbounds stret[i...] = f(getblockunsafe(st, i), num)
@@ -248,15 +250,15 @@ function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}, 
   SymmetricTensor(stret; testdatstruct = false)
 end
 
-broadcast{T<: AbstractFloat, N}(f::Function, num::Real, st::SymmetricTensor{T,N}) = broadcast(f, st, num)
+broadcast(f::Function, num::Real, st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = broadcast(f, st, num)
 
 """
-  broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
+  broadcast(f::Function, st::SymmetricTensor{T,N}...)
 
 Returns the elementwise operation, the overload of
 crodcast function from Base
 """
-function broadcast{T<: AbstractFloat, N}(f::Function, st::SymmetricTensor{T,N}...)
+function broadcast(f::Function, st::SymmetricTensor{T,N}...) where {T<: AbstractFloat, N}
   narg = size(st, 1)
   stret = similar(st[1].frame)
   for i in indices(N, st[1].bln)
@@ -269,7 +271,7 @@ end
 # implements simple operations on bs structure
 
 for f = (:+, :-)
-  @eval function ($f){T <: AbstractFloat, N}(st::SymmetricTensor{T, N}...)
+  @eval function ($f)(st::SymmetricTensor{T, N}...) where {T <: AbstractFloat, N}
     dats = st[1].dats
     for s in st
       if s.dats != dats
@@ -282,11 +284,11 @@ end
 
 
 for f = (:+, :-, :*, :/)
-  @eval ($f){T <: AbstractFloat, S <: Real}(st::SymmetricTensor{T}, numb::S) =
+  @eval ($f)(st::SymmetricTensor{T}, numb::S) where {T <: AbstractFloat, S <: Real} =
   broadcast($f, st, numb)
 end
 
 for f = (:+, :*)
-  @eval ($f){T <: AbstractFloat, S <: Real}(numb::S, st::SymmetricTensor{T}) =
+  @eval ($f)(numb::S, st::SymmetricTensor{T}) where {T <: AbstractFloat, S <: Real} =
   broadcast($f, numb, st)
 end
