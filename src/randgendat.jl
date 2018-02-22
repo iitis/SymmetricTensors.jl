@@ -28,9 +28,9 @@ Returns N-dims super-symmetric array of Float64 and sizes dats
 randsymarray(dats::Int, N::Int = 4) = randsymarray(Float64, dats, N)
 
 """
-  rand{(::Type{SymmetricTensor{T, N}}, dim::Int, bls::Int = 2)
+  rand(SymmetricTensor{T, N}, dim::Int, bls::Int = 2)
 
-Returns N-dimmensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1], 
+Returns N-dimmensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1), 
 dim denotes data size and bls denotes block size.
 
 """
