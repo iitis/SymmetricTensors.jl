@@ -1,15 +1,16 @@
 # ---- generated SymmetricTensors ----
 
 """
-  randsymarray(::Type{T}, dats::Int, N::Int = 4)
+  randsymarray(T, dim ::Int, N::Int = 4)
 
-Returns N-dims super-symmetric array of T type numbers and sizes dats
+Returns N-dimmensional random super-symmetric array with elements of type T drawn from uniform distribution on [0,1), 
+dim denotes data size.
 
 """
 
-function randsymarray(::Type{T}, dats::Int, N::Int = 4) where T<:Real
-  t = zeros(fill(dats, N)...)
-  for i in indices(N,dats)
+function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
+  t = zeros(fill(dim, N)...)
+  for i in indices(N,dim)
     randn = rand(T)
     for j in collect(permutations(i))
       @inbounds t[j...] = randn
@@ -19,13 +20,14 @@ function randsymarray(::Type{T}, dats::Int, N::Int = 4) where T<:Real
 end
 
 """
-  randsymarray(::Type{T}, dats::Int, N::Int = 4)
+  randsymarray(T, dim::Int, N::Int = 4)
 
-Returns N-dims super-symmetric array of Float64 and sizes dats
+Returns N-dimmensional random super-symmetric array with Float64 elements drawn from uniform distribution on [0,1), 
+dim denotes data size.
 
 """
 
-randsymarray(dats::Int, N::Int = 4) = randsymarray(Float64, dats, N)
+randsymarray(dim::Int, N::Int = 4) = randsymarray(Float64, dim, N)
 
 """
   rand(SymmetricTensor{T, N}, dim::Int, bls::Int = 2)
