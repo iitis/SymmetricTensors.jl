@@ -1,23 +1,25 @@
 """Type constructor
 
-frame - stroes nullable array of array
+frame - stores ArrayNArrays{T,N}
 bls - Int, size of ordinary block
 bln - Int, number of blocks
 datasize - Int, size of data stored (in each direction the same)
 sqr - Bool, is the last block size a same as ordinary's block size
 """
 immutable SymmetricTensor{T <: AbstractFloat, N}
-    frame::NullableArray{Array{T,N},N}
+    frame::ArrayNArrays{T,N}
     bls::Int
     bln::Int
     dats::Int
     sqr::Bool
-    function (::Type{SymmetricTensor})(frame::NullableArray{Array{T,N},N};
-       testdatstruct::Bool = true) where {T, N}
-        bls = size(frame[fill(1,N)...].value,1)
+    function (::Type{SymmetricTensor})(frame::ArrayNArrays{T,N};
+        testdatstruct::Bool = true) where {T, N}
+        # bls = size(frame[fill(1, N)...].value, 1)
+        bls = size(frame[fill(1, N)...], 1)
         bln = size(frame, 1)
-        last_block = size(frame[end].value, 1)
-        dats = bls * (bln-1) + last_block
+        # last_block = size(frame[end].value, 1)
+        last_block = size(frame[end], 1)
+        dats = bls * (bln - 1) + last_block
         if testdatstruct
           frtest(frame)
         end
@@ -77,33 +79,38 @@ function issymetric(ar::Array{T, N}, atol::Float64 = 1e-7) where {T <: AbstractF
 end
 
 """
-  frtest(data::NullableArray{Array{N},N})
+  frtest(data::ArrayNArrays{T,N})
 
 Returns assertion error if: all sizes of nullable array not equal, at least
   some undergiagonal block not null, some blocks (not last) not squared,
-   some diagonal blocks not symmetric.
+  some diagonal blocks not symmetric.
 """
-function frtest(data::NullableArray{Array{T,N},N}) where {T <: AbstractFloat, N}
+function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
   bln = size(data, 1)
-  bls = size(data[fill(1,N)...].value,1)
-  all(collect(size(data)) .== bln) || throw(AssertionError("frame not square"))
-  not_nulls = .!data.isnull
-  !any(map(x->.!issorted(ind2sub(not_nulls, x)), find(not_nulls))) ||
-  throw(AssertionError("underdiag. block not null"))
-  for i in indices(N, bln-1)
-    @inbounds all(collect(size(data[i...].value)) .== bls)||
-    throw(AssertionError("$i block not square"))
+  bls = size(data[fill(1, N)...], 1)
+  all(collect(size(data)) .== bln) || throw(AssertionError("frame not has non-equal dimensions"))
+
+  for i in CartesianRange(size(data))
+      if data[i]!=nothing && !issorted(i.I)
+          throw(AssertionError("underdiagonal block not null"))
+      end
+  end
+
+  for i in _indices(N, bln-1)
+    @inbounds all(collect(size(data[i...])) .== bls)||
+        throw(AssertionError("$i block not square"))
   end
   for i=1:bln
-    @inbounds issymetric(data[fill(i, N)...].value)
+    # @inbounds issymetric(data[fill(i, N)...].value)
+    @inbounds issymetric(data[fill(i, N)...])
   end
 end
 
 """
-  indices(dims::Int, tensize::Int)
+  _indices(dims::Int, tensize::Int)
 
 ```jldoctest
-julia> indices(2,3)
+julia> _indices(2,3)
 6-element Array{Tuple{Int64,Int64},1}:
  (1,1)
  (1,2)
@@ -113,7 +120,7 @@ julia> indices(2,3)
  (3,3)
 ```
 """
-function indices(dims::Int, tensize::Int)
+function _indices(dims::Int, tensize::Int)
     multinds = Tuple{fill(Int,dims)...}[]
     @eval begin
         @nloops $dims i x -> (x==$dims)? (1:$tensize): (i_{x+1}:$tensize) begin
@@ -143,7 +150,8 @@ sizetest(dats::Int, bls::Int) =
 
 Returns a block from Symmetric Tensor, unsafe works only if multi-index is sorted
 """
-getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...].value
+# getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...].value
+getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...]
 
 """
     getblock(st::SymmetricTensor, i::Tuple)
@@ -189,8 +197,7 @@ Returns: data in SymmetricTensor form.
 julia> a = reshape(collect(1.:16.), 4, 4);
 
 julia> convert(SymmetricTensor, a*a')
-SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[276.0 304.0; 304.0 336.0]
-   [332.0 360.0; 368.0 400.0]; #NULL [404.0 440.0; 440.0 480.0]],2,2,4,true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[276.0 304.0; 304.0 336.0][332.0 360.0; 368.0 400.0]; nothing [404.0 440.0; 440.0 480.0]], 2, 2, 4, true)
 ```
 """
 
@@ -199,8 +206,9 @@ function convert(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2) where
   dats = size(data,1)
   sizetest(dats, bls)
   bln = mod(dats,bls)==0 ?  dats÷bls : dats÷bls + 1
-  symten = NullableArray(Array{T, N}, fill(bln, N)...)
-  for writeind in indices(N, bln)
+  symten = arraynarrays(T, fill(bln, N)...)
+  # fill!(symten, nothing)
+  for writeind in _indices(N, bln)
       readind = map(k::Int -> ind2range(k, bls, dats), writeind)
       @inbounds symten[writeind...] = data[readind...]
   end
@@ -244,7 +252,7 @@ Returns data in SymmetricTensor type after elementwise operation (f) of
 """
 function broadcast(f::Function, st::SymmetricTensor{T,N}, num::Real) where {T<: AbstractFloat, N}
   stret = similar(st.frame)
-  for i in indices(N, st.bln)
+  for i in _indices(N, st.bln)
     @inbounds stret[i...] = f(getblockunsafe(st, i), num)
   end
   SymmetricTensor(stret; testdatstruct = false)
@@ -261,7 +269,7 @@ crodcast function from Base
 function broadcast(f::Function, st::SymmetricTensor{T,N}...) where {T<: AbstractFloat, N}
   narg = size(st, 1)
   stret = similar(st[1].frame)
-  for i in indices(N, st[1].bln)
+  for i in _indices(N, st[1].bln)
     @inbounds stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
   end
   SymmetricTensor(stret; testdatstruct = false)

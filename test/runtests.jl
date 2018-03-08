@@ -1,9 +1,9 @@
 using Base.Test
 
 using SymmetricTensors
-using NullableArrays
+# using NullableArrays
 
-import SymmetricTensors: ind2range, indices, issymetric, sizetest,
+import SymmetricTensors: ind2range, _indices, issymetric, sizetest,
 getblock, getblockunsafe, broadcast, randsymarray
 
 
@@ -20,7 +20,7 @@ getblock, getblockunsafe, broadcast, randsymarray
     @test issymetric([[1.0 2.0]; [2.0 1.0]]) == nothing
   end
   @testset "indexing" begin
-    @test indices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
+    @test _indices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
     @test ind2range(2, 3, 5) == 4:5
   end
   @testset "random generate of symmetric array" begin
@@ -57,10 +57,10 @@ t1 = randsymarray(7, 3)
   @testset "converting from array to SymmetricTensor" begin
     a = reshape(collect(1.:16.), 4, 4)
     @test getblockunsafe(convert(SymmetricTensor, a*a'), (1,1)) ==  [276.0  304.0; 304.0  336.0]
-    @test b.frame[1, 1, 1].value ≈ t[1:3, 1:3, 1:3]
-    @test b.frame[1, 2, 2].value ≈ t[1:3, 4:6, 4:6]
-    @test b.frame[2, 2, 2].value ≈ t[4:6, 4:6, 4:6]
-    @test isnull(b.frame[2, 1, 1])
+    @test b.frame[1, 1, 1] ≈ t[1:3, 1:3, 1:3]
+    @test b.frame[1, 2, 2] ≈ t[1:3, 4:6, 4:6]
+    @test b.frame[2, 2, 2] ≈ t[4:6, 4:6, 4:6]
+    @test b.frame[2, 1, 1] == nothing
   end
   @testset "Constructor tests" begin
     b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 2)
