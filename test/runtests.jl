@@ -3,7 +3,7 @@ using Base.Test
 using SymmetricTensors
 # using NullableArrays
 
-import SymmetricTensors: ind2range, _indices, issymetric, sizetest,
+import SymmetricTensors: ind2range, pyramidindices, issymetric, sizetest,
 getblock, getblockunsafe, broadcast, randsymarray
 
 
@@ -20,7 +20,7 @@ getblock, getblockunsafe, broadcast, randsymarray
     @test issymetric([[1.0 2.0]; [2.0 1.0]]) == nothing
   end
   @testset "indexing" begin
-    @test _indices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
+    @test pyramidindices(2, 3) == [(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
     @test ind2range(2, 3, 5) == 4:5
   end
   @testset "random generate of symmetric array" begin

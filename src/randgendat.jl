@@ -10,7 +10,7 @@ dim denotes data size.
 
 function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
   t = zeros(fill(dim, N)...)
-  for i in _indices(N,dim)
+  for i in pyramidindices(N,dim)
     n = rand(T)
     for j in collect(permutations(i))
         @inbounds t[j...] = n

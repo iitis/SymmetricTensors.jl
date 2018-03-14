@@ -96,7 +96,7 @@ function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
       end
   end
 
-  for i in _indices(N, bln-1)
+  for i in pyramidindices(N, bln-1)
     @inbounds all(collect(size(data[i...])) .== bls)||
         throw(AssertionError("$i block not square"))
   end
@@ -107,10 +107,10 @@ function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
 end
 
 """
-  _indices(dims::Int, tensize::Int)
+  pyramidindices(dims::Int, tensize::Int)
 
 ```jldoctest
-julia> _indices(2,3)
+julia> pyramidindices(2,3)
 6-element Array{Tuple{Int64,Int64},1}:
  (1,1)
  (1,2)
@@ -120,7 +120,7 @@ julia> _indices(2,3)
  (3,3)
 ```
 """
-function _indices(dims::Int, tensize::Int)
+function pyramidindices(dims::Int, tensize::Int)
     multinds = Tuple{fill(Int,dims)...}[]
     @eval begin
         @nloops $dims i x -> (x==$dims)? (1:$tensize): (i_{x+1}:$tensize) begin
@@ -208,7 +208,7 @@ function convert(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2) where
   bln = mod(dats,bls)==0 ?  dats÷bls : dats÷bls + 1
   symten = arraynarrays(T, fill(bln, N)...)
   # fill!(symten, nothing)
-  for writeind in _indices(N, bln)
+  for writeind in pyramidindices(N, bln)
       readind = map(k::Int -> ind2range(k, bls, dats), writeind)
       @inbounds symten[writeind...] = data[readind...]
   end
@@ -252,7 +252,7 @@ Returns data in SymmetricTensor type after elementwise operation (f) of
 """
 function broadcast(f::Function, st::SymmetricTensor{T,N}, num::Real) where {T<: AbstractFloat, N}
   stret = similar(st.frame)
-  for i in _indices(N, st.bln)
+  for i in pyramidindices(N, st.bln)
     @inbounds stret[i...] = f(getblockunsafe(st, i), num)
   end
   SymmetricTensor(stret; testdatstruct = false)
@@ -269,7 +269,7 @@ crodcast function from Base
 function broadcast(f::Function, st::SymmetricTensor{T,N}...) where {T<: AbstractFloat, N}
   narg = size(st, 1)
   stret = similar(st[1].frame)
-  for i in _indices(N, st[1].bln)
+  for i in pyramidindices(N, st[1].bln)
     @inbounds stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
   end
   SymmetricTensor(stret; testdatstruct = false)
