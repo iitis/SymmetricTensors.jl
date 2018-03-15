@@ -29,19 +29,13 @@ dim denotes data size.
 
 randsymarray(dim::Int, N::Int = 4) = randsymarray(Float64, dim, N)
 
-"""
-  rand(SymmetricTensor{T, N}, dim::Int, bls::Int = 2)
-
-Returns N-dimmensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1),
-dim denotes data size and bls denotes block size.
 
 """
 
-rand(::Type{SymmetricTensor{T, N}}, dim::Int, bls::Int = 2) where {T<:AbstractFloat, N} =
-  convert(SymmetricTensor, randsymarray(T, dim, N), bls)
+  fixpointperms(j::NTuple{N, Int}) where N
 
+Returns Vactor{Vector}, a fix point permutation of given multiindex
 
-"""
 TODO: this is a naive implementation
 """
 function fixpointperms(j::NTuple{N, Int}) where N
@@ -55,33 +49,47 @@ function fixpointperms(j::NTuple{N, Int}) where N
 end
 
 """
+  randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int})
 
-TODO: this is a naive implementation
+Returns a block of size dims and position j by a uniformly distributed random number
+of type T
+
 """
 function randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int}) where {T<:Real, N}
   t = zeros(dims)
+  ofset = vcat([0], cumsum(counts([j...])))
+  fp = fixpointperms(j)
   for i in 1:(prod(dims))
     i = ind2sub(dims, i)
-    n = rand(T)
-    for k in fixpointperms(j)
-        @inbounds t[i[k]...] = n
+    if mapreduce(k -> issorted(i[ofset[k]+1:ofset[k+1]]), *, 1:length(ofset)-1)
+      n = rand(T)
+      for k in fp
+          @inbounds t[i[k]...] = n
+      end
     end
   end
   t
 end
 
-"""
 
 """
-function randnn(::Type{T}, m::Int, n::Int, b::Int=2) where T<:AbstractFloat
+rand(SymmetricTensor{T, m}, n::Int, b::Int = 2)
+
+Returns m-dimmensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1),
+n denotes data size and b denotes block size.
+
+"""
+function rand(::Type{SymmetricTensor{T, m}}, n::Int, b::Int = 2) where {T<:AbstractFloat, m}
   sizetest(n, b)
   nbar = mod(n,b)==0 ? n÷b : n÷b + 1
   ret = arraynarrays(Float64, fill(nbar, m)...)
   for j in pyramidindices(m, nbar)
     dims = (mod(n,b) == 0 || !(nbar in j))? (fill(b,m)...): map(i -> (i == nbar)? n - b*(nbar-1): b, j)
-    jbar = (unique(j)...)
-    r = (j== jbar)? rand(T, dims...): randblock(T, dims, j)
-    @inbounds ret[j...] = r
+    if j == (unique(j)...)
+      @inbounds ret[j...] = rand(T, dims...)
+    else
+      @inbounds ret[j...] = randblock(T, dims, j)
+    end
   end
   SymmetricTensor(ret; testdatstruct = true)
 end

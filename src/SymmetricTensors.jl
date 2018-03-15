@@ -1,8 +1,9 @@
-VERSION >= v"0.5.0-dev+6521"
+VERSION >= v"0.6.0-dev+6521"
 
 module SymmetricTensors
   using Combinatorics
   using Base.Cartesian
+  using StatsBase
   import Base: +, -, *, /, size, convert, getindex, diag, broadcast, rand
 
   const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Void}, N} where {T<:AbstractFloat, N}
