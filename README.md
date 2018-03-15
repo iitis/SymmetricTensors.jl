@@ -4,8 +4,8 @@
 [![DOI](https://zenodo.org/badge/79091776.svg)](https://zenodo.org/badge/latestdoi/79091776)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
-without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `NullableArrays{Array{T, N}, N}` type "https://github.com/JuliaStats/NullableArrays.jl".
-Repeated blocks are replaced by #null. The module introduces `SymmetricTensors{T, N}` type and some basic operations on this type.
+without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `Union{Array{Float64,N}, Void}` structure.
+Repeated blocks are replaced by `Void`. The module introduces `SymmetricTensors{T, N}` type and some basic operations on this type.
 As of 01/01/2017 [@kdomino](https://github.com/kdomino) is the lead maintainer of this package.
 
 ## Installation
@@ -22,19 +22,21 @@ to install the files. Julia 0.6 or later is required.
 ## Constructor
 
 ```julia
-julia> data = 2×2 NullableArrays.NullableArray{Array{Float64,2},2}:
-[1.0 1.0; 1.0 1.0]  [1.0 1.0; 1.0 1.0]
-NULL               [1.0 1.0; 1.0 1.0]
+julia> data = 2×2 Array{Union{Array{Float64,2}, Void},2}:
+ [1.0 1.0; 1.0 1.0]  [1.0 1.0; 1.0 1.0]
+ nothing             [1.0 1.0; 1.0 1.0]
+
 
 julia> SymmetricTensor(data)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]],2,2,4, true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; nothing [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
+
 ```
 
 Without testing data symmetry and features
 
 ```julia
 julia> SymmetricTensor(data; testdatstruct = false)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; nothing [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
 ```
 
 ## Converting
@@ -56,7 +58,8 @@ julia> data = ones(4,4)
 1.0  1.0  1.0  1.0
 
 julia> convert(SymmetricTensor, data, 2)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; NULL [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
+SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[1.0 1.0; 1.0 1.0] [1.0 1.0; 1.0 1.0]; nothing [1.0 1.0; 1.0 1.0]], 2, 2, 4, true)
+
 ```
 
 From `SymmetricTensors{T, N}` to `Array{T, N}`
@@ -97,11 +100,13 @@ julia> diag(st)
 
 ## Random Symmetric Ternsor generation
 
-To generate random Symmetric Tensor just use `rand(SymmetricTensor{T, N}, dats::Int, bls::Int = 2)`.
+To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here n denotes data size and b denotes block size.
 
 ```julia
-julia> rand(SymmetricTensor{Float64, 2}, 2)
-SymmetricTensors.SymmetricTensor{Float64,2}(Nullable{Array{Float64,2}}[[0.587331 0.704768; 0.704768 0.836633]], 2, 1, 2, true)
+julia> srand(42)
+
+julia> julia> rand(SymmetricTensor{Float64, 2}, 2)
+SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
 ```
 
 ## Auxiliary function

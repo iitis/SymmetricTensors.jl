@@ -73,23 +73,23 @@ end
 
 
 """
-rand(SymmetricTensor{T, m}, n::Int, b::Int = 2)
+rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)
 
-Returns m-dimmensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1),
+Returns N-dimensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1),
 n denotes data size and b denotes block size.
 
 """
-function rand(::Type{SymmetricTensor{T, m}}, n::Int, b::Int = 2) where {T<:AbstractFloat, m}
+function rand(::Type{SymmetricTensor{T, N}}, n::Int, b::Int = 2) where {T<:AbstractFloat, N}
   sizetest(n, b)
   nbar = mod(n,b)==0 ? n÷b : n÷b + 1
-  ret = arraynarrays(Float64, fill(nbar, m)...)
-  for j in pyramidindices(m, nbar)
-    dims = (mod(n,b) == 0 || !(nbar in j))? (fill(b,m)...): map(i -> (i == nbar)? n - b*(nbar-1): b, j)
+  ret = arraynarrays(Float64, fill(nbar, N)...)
+  for j in pyramidindices(N, nbar)
+    dims = (mod(n,b) == 0 || !(nbar in j))? (fill(b,N)...): map(i -> (i == nbar)? n - b*(nbar-1): b, j)
     if j == (unique(j)...)
       @inbounds ret[j...] = rand(T, dims...)
     else
       @inbounds ret[j...] = randblock(T, dims, j)
     end
   end
-  SymmetricTensor(ret; testdatstruct = true)
+  SymmetricTensor(ret; testdatstruct = false)
 end
