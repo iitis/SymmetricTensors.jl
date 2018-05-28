@@ -9,7 +9,7 @@ notifications:
   email: false
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone("https://github.com/ZKSI/SymmetricTensors.jl"); Pkg.checkout("SymmetricTensors", "nonullablearrays"); Pkg.build("SymmetricTensors")'
+  - julia -e 'Pkg.clone("https://github.com/ZKSI/SymmetricTensors.jl"); Pkg.build("SymmetricTensors")'
   - julia -e 'Pkg.test("SymmetricTensors"; coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("SymmetricTensors")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
