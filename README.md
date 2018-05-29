@@ -98,7 +98,7 @@ julia> diag(st)
  1.0
 ```
 
-## Random Symmetric Ternsor generation
+## Random Symmetric Tensor generation
 
 To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here n denotes data size and b denotes block size.
 
