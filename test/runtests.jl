@@ -1,7 +1,6 @@
 using Base.Test
 
 using SymmetricTensors
-# using NullableArrays
 
 import SymmetricTensors: ind2range, pyramidindices, issymetric, sizetest,
 getblock, getblockunsafe, broadcast, randsymarray, fixpointperms, randblock
@@ -40,7 +39,7 @@ t1 = randsymarray(7, 3)
 
 
 @testset "Converting" begin
-  b = convert(SymmetricTensornew, t, 3)
+  b = convert(SymmetricTensor, t, 3)
   @testset "Geting blocks of Symmetric Tensors" begin
     @test getblockunsafe(b, (1, 1, 1)) == t[1:3, 1:3, 1:3]
     @test getblock(b, (2, 1, 2)) == t[4:6, 1:3, 4:6]
@@ -56,14 +55,14 @@ t1 = randsymarray(7, 3)
   end
   @testset "converting from array to SymmetricTensor" begin
     a = reshape(collect(1.:16.), 4, 4)
-    @test getblockunsafe(convert(SymmetricTensornew, a*a'), (1,1)) ==  [276.0  304.0; 304.0  336.0]
+    @test getblockunsafe(convert(SymmetricTensor, a*a'), (1,1)) ==  [276.0  304.0; 304.0  336.0]
     @test b.frame[1, 1, 1] ≈ t[1:3, 1:3, 1:3]
     @test b.frame[1, 2, 2] ≈ t[1:3, 4:6, 4:6]
     @test b.frame[2, 2, 2] ≈ t[4:6, 4:6, 4:6]
     @test b.frame[2, 1, 1] == nothing
   end
   @testset "Constructor tests" begin
-    b1 = convert(SymmetricTensornew, t[1:6, 1:6, 1:6], 2)
+    b1 = convert(SymmetricTensor, t[1:6, 1:6, 1:6], 2)
     @test !(b.sqr)
     @test b1.sqr
     @test b.bls == 3
@@ -76,7 +75,7 @@ end
   @test fixpointperms((1,2,3,3)) == [[1,2,3,4],[1,2,4,3]]
   @test fixpointperms((1,2,3,4)) == [[1,2,3,4]]
   srand(42)
-  aa = Array.(rand(SymmetricTensornew{Float64, 4}, 3))
+  aa = Array.(rand(SymmetricTensor{Float64, 4}, 3))
   tt = cat(3, [0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933])
   #@test aa ≈ tt atol=1.0e-5
   issymetric(aa)
@@ -88,8 +87,8 @@ end
 end
 
 @testset "Basic operations" begin
-  b = convert(SymmetricTensornew, t)
-  b1 = convert(SymmetricTensornew, t1)
+  b = convert(SymmetricTensor, t)
+  b1 = convert(SymmetricTensor, t1)
   @testset "Get super-diagonal" begin
     @test diag(b) ≈ [t[fill(i, ndims(t))...] for i = 1:size(t, 1)]
     @test diag(b1) ≈ [t1[fill(i, ndims(t1))...] for i = 1:size(t1, 1)]
@@ -113,30 +112,30 @@ end
 
 @testset "Exceptions" begin
   @testset "Dimensions in operations" begin
-    b = convert(SymmetricTensornew, t)
-    b1 = convert(SymmetricTensornew, t, 4)
-    b4 = convert(SymmetricTensornew, t[1:4, 1:4, 1:4])
-    b5 = convert(SymmetricTensornew, t[1:3, 1:3, 1:3])
-    b2 = convert(SymmetricTensornew, t[:,:,1])
+    b = convert(SymmetricTensor, t)
+    b1 = convert(SymmetricTensor, t, 4)
+    b4 = convert(SymmetricTensor, t[1:4, 1:4, 1:4])
+    b5 = convert(SymmetricTensor, t[1:3, 1:3, 1:3])
+    b2 = convert(SymmetricTensor, t[:,:,1])
     @test_throws DimensionMismatch b + b1
     @test_throws DimensionMismatch b4 + b5
     @test_throws MethodError b + b2
     @test_throws UndefVarError b + b3
   end
   @testset "Constructor exceptions" begin
-    @test_throws TypeError SymmetricTensornew([1.0 2.0]; [3.0 4.0])
-    @test_throws DimensionMismatch SymmetricTensornew(t[:, :, 1:2])
-    b = SymmetricTensornew(t).frame
+    @test_throws TypeError SymmetricTensor([1.0 2.0]; [3.0 4.0])
+    @test_throws DimensionMismatch SymmetricTensor(t[:, :, 1:2])
+    b = SymmetricTensor(t).frame
     b1 = copy(b)
     b2 = copy(b)
     b[1,1,1] = reshape(collect(1:8), (2,2,2))
-    @test_throws AssertionError SymmetricTensornew(b)
+    @test_throws AssertionError SymmetricTensor(b)
     b1[1,2,3] = reshape(collect(1:4), (2,2,1))
-    @test_throws AssertionError SymmetricTensornew(b1)
+    @test_throws AssertionError SymmetricTensor(b1)
     b2[3,2,1] = reshape(collect(1:8), (2,2,2))
-    @test_throws AssertionError SymmetricTensornew(b2)
+    @test_throws AssertionError SymmetricTensor(b2)
     # wrong block size
-    @test_throws DimensionMismatch convert(SymmetricTensornew, t, 25)
-    @test_throws DimensionMismatch convert(SymmetricTensornew, t, 0)
+    @test_throws DimensionMismatch convert(SymmetricTensor, t, 25)
+    @test_throws DimensionMismatch convert(SymmetricTensor, t, 0)
   end
 end

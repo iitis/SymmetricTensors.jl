@@ -79,7 +79,7 @@ Returns N-dimensional random SymmetricTensor with elements of type T drawn from 
 n denotes data size and b denotes block size.
 
 """
-function rand(::Type{SymmetricTensornew{T, N}}, n::Int, b::Int = 2) where {T<:AbstractFloat, N}
+function rand(::Type{SymmetricTensor{T, N}}, n::Int, b::Int = 2) where {T<:AbstractFloat, N}
   sizetest(n, b)
   nbar = mod(n,b)==0 ? n÷b : n÷b + 1
   ret = arraynarrays(Float64, fill(nbar, N)...)
@@ -91,5 +91,5 @@ function rand(::Type{SymmetricTensornew{T, N}}, n::Int, b::Int = 2) where {T<:Ab
       @inbounds ret[j...] = randblock(T, dims, j)
     end
   end
-  SymmetricTensornew(ret; testdatstruct = false)
+  SymmetricTensor(ret; testdatstruct = false)
 end

@@ -4,7 +4,6 @@ module SymmetricTensors
   using Combinatorics
   using Base.Cartesian
   using StatsBase
-  using NullableArrays
   import Base: +, -, *, /, size, convert, getindex, diag, broadcast, rand
 
   const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Void}, N} where {T<:AbstractFloat, N}
