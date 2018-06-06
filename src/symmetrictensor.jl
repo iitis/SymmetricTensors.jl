@@ -240,7 +240,7 @@ Return vector of floats, the super-diag of st
 
 """
 
-diag(st::Union{SymmetricTensor{T,N}, SymmetricTensor{T,N}}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...], 1:st.dats)
+diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...], 1:st.dats)
 
 
 """
