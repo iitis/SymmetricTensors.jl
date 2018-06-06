@@ -19,6 +19,6 @@ module SymmetricTensors
   #generates random SymmetricTensors
   include("randgendat.jl")
 
-  export SymmetricTensor, SymmetricTensornew, convert, +, -, *, /, unfold, diag, rand,
+  export SymmetricTensor, convert, +, -, *, /, unfold, diag, rand,
          ArrayNArrays, arraynarrays
 end

@@ -26,8 +26,6 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     end
 end
 
-SymmetricTensornew = SymmetricTensor
-
 """
   unfold(ar::Array{N}, mode::Int)
 
