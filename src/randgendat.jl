@@ -7,9 +7,8 @@ Returns N-dimmensional random super-symmetric array with elements of type T draw
 dim denotes data size.
 
 """
-
 function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
-  t = zeros(fill(dim, N)...)
+  t = zeros(fill(dim, N)...,)
   for i in pyramidindices(N,dim)
     n = rand(T)
     for j in collect(permutations(i))
@@ -26,7 +25,6 @@ Returns N-dimmensional random super-symmetric array with Float64 elements drawn 
 dim denotes data size.
 
 """
-
 randsymarray(dim::Int, N::Int = 4) = randsymarray(Float64, dim, N)
 
 
@@ -60,7 +58,7 @@ function randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int}) where {T<
   ofset = vcat([0], cumsum(counts([j...])))
   fp = fixpointperms(j)
   for i in 1:(prod(dims))
-    i = ind2sub(dims, i)
+    i = Tuple(CartesianIndices(dims)[i])
     if mapreduce(k -> issorted(i[ofset[k]+1:ofset[k+1]]), *, 1:length(ofset)-1)
       n = rand(T)
       for k in fp
@@ -82,10 +80,10 @@ n denotes data size and b denotes block size.
 function rand(::Type{SymmetricTensor{T, N}}, n::Int, b::Int = 2) where {T<:AbstractFloat, N}
   sizetest(n, b)
   nbar = mod(n,b)==0 ? n÷b : n÷b + 1
-  ret = arraynarrays(Float64, fill(nbar, N)...)
+  ret = arraynarrays(Float64, fill(nbar, N)...,)
   for j in pyramidindices(N, nbar)
-    dims = (mod(n,b) == 0 || !(nbar in j))? (fill(b,N)...): map(i -> (i == nbar)? n - b*(nbar-1): b, j)
-    if j == (unique(j)...)
+    dims = (mod(n,b) == 0 || !(nbar in j)) ? (fill(b,N)...,) : map(i -> (i == nbar) ? n - b*(nbar-1) : b, j)
+    if j == (unique(j)...,)
       @inbounds ret[j...] = rand(T, dims...)
     else
       @inbounds ret[j...] = randblock(T, dims, j)

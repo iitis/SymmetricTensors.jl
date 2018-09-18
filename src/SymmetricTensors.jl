@@ -4,9 +4,11 @@ module SymmetricTensors
   using Combinatorics
   using Base.Cartesian
   using StatsBase
-  import Base: +, -, *, /, size, convert, getindex, diag, broadcast, rand
+  using Random
+  using LinearAlgebra
+  import Base: +, -, *, /, size, convert, getindex,  rand
 
-  const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Void}, N} where {T<:AbstractFloat, N}
+  const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N} where {T<:AbstractFloat, N}
   function arraynarrays(T::Type, dims...)
       N = length(dims)
       symten = ArrayNArrays{T,N}(dims...)

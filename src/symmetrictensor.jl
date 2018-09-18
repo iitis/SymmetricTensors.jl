@@ -6,8 +6,7 @@ bln - Int, number of blocks
 datasize - Int, size of data stored (in each direction the same)
 sqr - Bool, is the last block size a same as ordinary's block size
 """
-
-immutable SymmetricTensor{T <: AbstractFloat, N}
+struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
     bls::Int
     bln::Int
@@ -15,7 +14,7 @@ immutable SymmetricTensor{T <: AbstractFloat, N}
     sqr::Bool
     function (::Type{SymmetricTensor})(frame::ArrayNArrays{T,N};
         testdatstruct::Bool = true) where {T, N}
-        bls = size(frame[fill(1, N)...], 1)
+        bls = size(frame[fill(1, N)...,], 1)
         bln = size(frame, 1)
         last_block = size(frame[end], 1)
         dats = bls * (bln - 1) + last_block
@@ -85,10 +84,10 @@ Returns assertion error if: all sizes of nullable array not equal, at least
 """
 function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
   bln = size(data, 1)
-  bls = size(data[fill(1, N)...], 1)
+  bls = size(data[fill(1, N)...,], 1)
   all(collect(size(data)) .== bln) || throw(AssertionError("frame not has non-equal dimensions"))
 
-  for i in CartesianRange(size(data))
+  for i in CartesianIndices(size(data))
       if data[i]!=nothing && !issorted(i.I)
           throw(AssertionError("underdiagonal block not null"))
       end
@@ -99,7 +98,7 @@ function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
         throw(AssertionError("$i block not square"))
   end
   for i=1:bln
-    @inbounds issymetric(data[fill(i, N)...])
+    @inbounds issymetric(data[fill(i, N)...,])
   end
 end
 
@@ -118,9 +117,9 @@ julia> pyramidindices(2,3)
 ```
 """
 function pyramidindices(dims::Int, tensize::Int)
-    multinds = Tuple{fill(Int,dims)...}[]
+    multinds = Tuple{fill(Int,dims)...,}[]
     @eval begin
-        @nloops $dims i x -> (x==$dims)? (1:$tensize): (i_{x+1}:$tensize) begin
+        @nloops $dims i x -> (x==$dims) ? (1:$tensize) : (i_{x+1}:$tensize) begin
             @inbounds multind = @ntuple $dims x -> i_{$dims-x+1}
             push!($multinds, multind)
         end
@@ -147,7 +146,6 @@ sizetest(dats::Int, bls::Int) =
 
 Returns a block from Symmetric Tensor, unsafe works only if multi-index is sorted
 """
-
 getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...]
 
 
@@ -166,7 +164,6 @@ end
 
 Returns a Symmetric Tensor element for a given multi-index
 """
-
 function getindex(st::SymmetricTensor, mulind::Int...)
   b = st.bls
   j = map(a -> div((a-1), b)+1, mulind)
@@ -185,10 +182,10 @@ julia> ind2range(2,3,5)
 4:5
 ```
 """
-ind2range(i::Int, bls::Int, dats::Int) = (i-1)*bls+1: ((i*bls <= dats)? i*bls: dats)
+ind2range(i::Int, bls::Int, dats::Int) = (i-1)*bls+1: ((i*bls <= dats) ? i*bls : dats)
 
 """
-  convert(::Type{SymmetricTensor}, data::Array{N}, bls::Int)
+  SymmetricTensor(data::Array{N}, bls::Int)
 
 Returns: data in SymmetricTensor form.
 ```jldoctest
@@ -198,20 +195,18 @@ julia> convert(SymmetricTensor, a*a')
 SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[276.0 304.0; 304.0 336.0][332.0 360.0; 368.0 400.0]; nothing [404.0 440.0; 440.0 480.0]], 2, 2, 4, true)
 ```
 """
-
-function convert(::Type{SymmetricTensor}, data::Array{T, N}, bls::Int = 2) where {T <: AbstractFloat, N}
+function SymmetricTensor(data::Array{T, N}, bls::Int = 2) where {T <: AbstractFloat, N}
   issymetric(data)
   dats = size(data,1)
   sizetest(dats, bls)
   bln = mod(dats,bls)==0 ?  dats÷bls : dats÷bls + 1
-  symten = arraynarrays(T, fill(bln, N)...)
+  symten = arraynarrays(T, fill(bln, N)...,)
   for writeind in pyramidindices(N, bln)
       readind = map(k::Int -> ind2range(k, bls, dats), writeind)
       @inbounds symten[writeind...] = data[readind...]
   end
   SymmetricTensor(symten)
 end
-
 
 """
   convert(::Type{Array}, st::SymmetricTensor{N})
@@ -220,9 +215,10 @@ Return N dims array converted from SymmetricTensor type
 
 """
 function convert(::Type{Array}, st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
-  array = zeros(T, fill(st.dats, N)...)
+  array = zeros(T, fill(st.dats, N)...,)
   for i = 1:(st.bln^N)
-    readind = ind2sub((fill(st.bln, N)...), i)
+    dims = (fill(st.bln, N)...,)
+    readind= Tuple(CartesianIndices(dims)[i])
     writeind = map(k -> ind2range(readind[k], st.bls, st.dats), 1:N)
     @inbounds array[writeind...] = getblock(st, readind)
   end
@@ -237,65 +233,38 @@ end
 Return vector of floats, the super-diag of st
 
 """
-
-diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...], 1:st.dats)
-
-
-"""
-  broadcast(f::Function, st::SymmetricTensor{N}, num)
-
-Returns data in SymmetricTensor type after elementwise operation (f) of
- Symmetric Tensor and number
-"""
-function broadcast(f::Function, st::SymmetricTensor{T,N}, num::Real) where {T<: AbstractFloat, N}
-  stret = similar(st.frame)
-  for i in pyramidindices(N, st.bln)
-    @inbounds stret[i...] = f(getblockunsafe(st, i), num)
-  end
-  SymmetricTensor(stret; testdatstruct = false)
-end
-
-
-broadcast(f::Function, num::Real, st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = broadcast(f, st, num)
-
-"""
-  broadcast(f::Function, st::SymmetricTensor{T,N}...)
-
-Returns the elementwise operation, the overload of
-crodcast function from Base
-"""
-function broadcast(f::Function, st::SymmetricTensor{T,N}...) where {T<: AbstractFloat, N}
-  narg = size(st, 1)
-  stret = similar(st[1].frame)
-  for i in pyramidindices(N, st[1].bln)
-    @inbounds stret[i...] = broadcast(f, map(k -> getblockunsafe(st[k], i), 1:narg)...)
-  end
-  SymmetricTensor(stret; testdatstruct = false)
-end
-
+diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...,], 1:st.dats)
 
 
 # implements simple operations on bs structure
 
-for f = (:+, :-)
+for f = (:+, :-, :*, :/)
   @eval function ($f)(st::SymmetricTensor{T,N}...) where {T <: AbstractFloat, N}
-    dats = st[1].dats
-    for s in st
-      if s.dats != dats
-        throw(DimensionMismatch("dimensions must match"))
-      end
+    for s in st[2:end]
+      s.dats == st[1].dats || throw(DimensionMismatch("dimensions must match"))
     end
-    broadcast($f, st...)
+    narg = size(st, 1)
+    stret = similar(st[1].frame)
+    for i in pyramidindices(N, st[1].bln)
+      @inbounds stret[i...] = $f.(map(t -> getblockunsafe(t, i), st)...)
+    end
+    SymmetricTensor(stret; testdatstruct = false)
   end
 end
 
 
 for f = (:+, :-, :*, :/)
-  @eval ($f)(st::SymmetricTensor{T}, numb::S) where {T <: AbstractFloat, S <: Real} =
-  broadcast($f, st, numb)
+  @eval function ($f)(st::SymmetricTensor{T, N}, numb::S) where {T <: AbstractFloat, S <: Real, N}
+      stret = similar(st.frame)
+      for i in pyramidindices(N, st.bln)
+        @inbounds stret[i...] = $f.(getblockunsafe(st, i), numb)
+      end
+      SymmetricTensor(stret; testdatstruct = false)
+  end
 end
+
 
 for f = (:+, :*)
   @eval ($f)(numb::S, st::SymmetricTensor{T}) where {T <: AbstractFloat, S <: Real} =
-  broadcast($f, numb, st)
+  ($f)(st::SymmetricTensor{T}, numb::S)
 end
