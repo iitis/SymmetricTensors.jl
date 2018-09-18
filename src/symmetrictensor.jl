@@ -6,7 +6,7 @@ bln - Int, number of blocks
 datasize - Int, size of data stored (in each direction the same)
 sqr - Bool, is the last block size a same as ordinary's block size
 """
-struct SymmetricTensor{T <: AbstractFloat, N}
+mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
     bls::Int
     bln::Int
@@ -160,17 +160,43 @@ function getblock(st::SymmetricTensor, mulind::Tuple)
 end
 
 """
-    getindex(st::SymmetricTensor, i::Tuple)
+    getindex(st::SymmetricTensor, mulind::Tuple)
 
 Returns a Symmetric Tensor element for a given multi-index
 """
 function getindex(st::SymmetricTensor, mulind::Int...)
   b = st.bls
-  j = map(a -> div((a-1), b)+1, mulind)
-  i = map(a -> ((a-1)%b)+1, mulind)
+  j = map(k -> div((k-1), b)+1, mulind)
+  i = map(k -> ((k-1)%b)+1, mulind)
   getblock(st, j)[i...]
 end
 
+"""
+    setindexunsafe!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...)
+
+Unsafe change a SymmetricTensors value at the given multi-index
+"""
+function setindexunsafe!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...) where {T <: AbstractFloat, N}
+    b = st.bls
+    j = map(k -> div((k-1), b)+1, mulind)
+    i = map(k -> ((k-1)%b)+1, mulind)
+    if j == (unique(j)...,)
+        getblockunsafe(st, j)[i...] = x
+    else
+        for p in fixpointperms(j)
+            getblockunsafe(st, j)[i[p]...] = x
+        end
+    end
+end
+
+"""
+    setindex!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...)
+
+Change a SymmetricTensors value at the given multi-index
+"""
+function setindex!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...) where {T <: AbstractFloat, N}
+    setindexunsafe!(st, x, sort([mulind...])...)
+end
 """
 
     ind2range(i::Int, bls::Int, dats::Int)

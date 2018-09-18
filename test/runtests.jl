@@ -1,9 +1,10 @@
 using Test
 using SymmetricTensors
 using Random
+using Combinatorics
 
 import SymmetricTensors: ind2range, pyramidindices, issymetric, sizetest,
-getblock, getblockunsafe, randsymarray, fixpointperms, randblock
+getblock, getblockunsafe, randsymarray, fixpointperms, randblock, setindexunsafe!
 
 
 @testset "Helpers" begin
@@ -84,6 +85,32 @@ end
   Random.seed!(42)
   @test randblock(Float64, (2,2), (1,1)) ≈ [0.533183  0.454029; 0.454029  0.0176868] atol=1.0e-5
   @test randblock(Float64, (2,2), (1,2)) ≈ [0.172933  0.973566; 0.958926  0.30387] atol=1.0e-5
+end
+
+@testset "Seting value" begin
+    @testset "Unsafe" begin
+      Random.seed!(42)
+      x = rand(SymmetricTensor{Float64, 4}, 7)
+      y = rand(SymmetricTensor{Float64, 3}, 7)
+      setindexunsafe!(x, 10000., 1,1,2,2)
+      setindexunsafe!(x, 100., 4,4,4,4)
+      setindexunsafe!(x, 200., 3,5,6,7)
+      @test prod(map(i -> x[(1,1,2,2)[i]...], collect(permutations(1:4))) .== 10000.)
+      @test prod(map(i -> x[(3,5,6,7)[i]...], collect(permutations(1:4))) .== 200.)
+      @test x[4,4,4,4] == 100.
+      issymetric(convert(Array, x))
+      setindexunsafe!(y, 10000., 1,2,3)
+      setindexunsafe!(y, 100., 7,7,7)
+      @test prod(map(i -> y[(1,2,3)[i]...], collect(permutations(1:3))) .== 10000.)
+      @test y[7,7,7] == 100.
+      issymetric(convert(Array, y))
+    end
+    @testset "safe" begin
+      x = rand(SymmetricTensor{Float64, 4}, 7)
+      x[7,4,3,1] = 20.
+      @test prod(map(i -> x[(1,3,4,7)[i]...], collect(permutations(1:4))) .== 20.)
+      issymetric(convert(Array, x))
+    end
 end
 
 @testset "Basic operations" begin
