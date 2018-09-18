@@ -246,18 +246,17 @@ for f = (:+, :-, :*, :/)
     narg = size(st, 1)
     stret = similar(st[1].frame)
     for i in pyramidindices(N, st[1].bln)
-      @inbounds stret[i...] = $f.(map(t -> getblockunsafe(t, i), st)...)
+      @inbounds stret[i...] = broadcast($f, map(t -> getblockunsafe(t, i), st)...)
     end
     SymmetricTensor(stret; testdatstruct = false)
   end
 end
 
-
 for f = (:+, :-, :*, :/)
   @eval function ($f)(st::SymmetricTensor{T, N}, numb::S) where {T <: AbstractFloat, S <: Real, N}
       stret = similar(st.frame)
       for i in pyramidindices(N, st.bln)
-        @inbounds stret[i...] = $f.(getblockunsafe(st, i), numb)
+        @inbounds stret[i...] = broadcast($f, getblockunsafe(st, i), numb)
       end
       SymmetricTensor(stret; testdatstruct = false)
   end
