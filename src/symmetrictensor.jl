@@ -238,7 +238,8 @@ diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, 
 
 # implements simple operations on bs structure
 
-for f = (:+, :-, :*, :/)
+
+for f = (:+, :-)
   @eval function ($f)(st::SymmetricTensor{T,N}...) where {T <: AbstractFloat, N}
     for s in st[2:end]
       s.dats == st[1].dats || throw(DimensionMismatch("dimensions must match"))

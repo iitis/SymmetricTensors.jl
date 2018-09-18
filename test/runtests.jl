@@ -96,8 +96,6 @@ end
   @testset "Elementwise operations" begin
     @test convert(Array, b + b1) ≈ t + t1
     @test convert(Array, b - b1) ≈ t - t1
-    @test convert(Array, b * b1) ≈ t .* t1
-    @test convert(Array, b / b1) ≈ t ./ t1
   end
   @testset "Matrix--scalar operations" begin
     @test convert(Array, b * 2.1) ≈ t * 2.1
