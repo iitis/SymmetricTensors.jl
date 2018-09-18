@@ -11,7 +11,7 @@ module SymmetricTensors
   const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N} where {T<:AbstractFloat, N}
   function arraynarrays(T::Type, dims...)
       N = length(dims)
-      symten = ArrayNArrays{T,N}(dims...)
+      symten = ArrayNArrays{T,N}(undef, dims...)
       fill!(symten, nothing)
       return symten
   end
