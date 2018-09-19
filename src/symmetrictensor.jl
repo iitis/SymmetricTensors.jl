@@ -251,6 +251,16 @@ function convert(::Type{Array}, st::SymmetricTensor{T,N}) where {T<:AbstractFloa
   array
 end
 
+function Array(st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
+  array = zeros(T, fill(st.dats, N)...,)
+  for i = 1:(st.bln^N)
+    dims = (fill(st.bln, N)...,)
+    readind= Tuple(CartesianIndices(dims)[i])
+    writeind = map(k -> ind2range(readind[k], st.bls, st.dats), 1:N)
+    @inbounds array[writeind...] = getblock(st, readind)
+  end
+  array
+end
 # ---- basic operations on Symmetric Tensors ----
 
 """
