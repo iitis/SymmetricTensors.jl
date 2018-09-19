@@ -217,7 +217,7 @@ Returns: data in SymmetricTensor form.
 ```jldoctest
 julia> a = reshape(collect(1.:16.), 4, 4);
 
-julia> convert(SymmetricTensor, a*a')
+julia> SymmetricTensor(a*a')
 SymmetricTensors.SymmetricTensor{Float64,2}(Union{Array{Float64,2}, Void}[[276.0 304.0; 304.0 336.0][332.0 360.0; 368.0 400.0]; nothing [404.0 440.0; 440.0 480.0]], 2, 2, 4, true)
 ```
 """
@@ -235,22 +235,11 @@ function SymmetricTensor(data::Array{T, N}, bls::Int = 2) where {T <: AbstractFl
 end
 
 """
-  convert(::Type{Array}, st::SymmetricTensor{N})
+  Array(st::SymmetricTensor{N})
 
 Return N dims array converted from SymmetricTensor type
 
 """
-function convert(::Type{Array}, st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
-  array = zeros(T, fill(st.dats, N)...,)
-  for i = 1:(st.bln^N)
-    dims = (fill(st.bln, N)...,)
-    readind= Tuple(CartesianIndices(dims)[i])
-    writeind = map(k -> ind2range(readind[k], st.bls, st.dats), 1:N)
-    @inbounds array[writeind...] = getblock(st, readind)
-  end
-  array
-end
-
 function Array(st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
   array = zeros(T, fill(st.dats, N)...,)
   for i = 1:(st.bln^N)

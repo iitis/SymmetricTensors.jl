@@ -4,7 +4,7 @@ module SymmetricTensors
   using StatsBase
   using Random
   using LinearAlgebra
-  import Base: +, -, *, /, size, convert, getindex, rand, setindex!
+  import Base: +, -, *, /, size, getindex, rand, setindex!
 
   const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N} where {T<:AbstractFloat, N}
   function arraynarrays(T::Type, dims...)

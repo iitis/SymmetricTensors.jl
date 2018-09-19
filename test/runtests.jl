@@ -76,7 +76,7 @@ end
   @test fixpointperms((1,2,3,3)) == [[1,2,3,4],[1,2,4,3]]
   @test fixpointperms((1,2,3,4)) == [[1,2,3,4]]
   Random.seed!(42)
-  aa = convert(Array,rand(SymmetricTensor{Float64, 4}, 3))
+  aa = Array(rand(SymmetricTensor{Float64, 4}, 3))
   tt = cat([0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933], dims = 3)
   #@test aa ≈ tt atol=1.0e-5
   issymetric(aa)
@@ -98,18 +98,18 @@ end
       @test prod(map(i -> x[(1,1,2,2)[i]...], collect(permutations(1:4))) .== 10000.)
       @test prod(map(i -> x[(3,5,6,7)[i]...], collect(permutations(1:4))) .== 200.)
       @test x[4,4,4,4] == 100.
-      issymetric(convert(Array, x))
+      issymetric(Array(x))
       setindexunsafe!(y, 10000., 1,2,3)
       setindexunsafe!(y, 100., 7,7,7)
       @test prod(map(i -> y[(1,2,3)[i]...], collect(permutations(1:3))) .== 10000.)
       @test y[7,7,7] == 100.
-      issymetric(convert(Array, y))
+      issymetric(Array(y))
     end
     @testset "safe" begin
       x = rand(SymmetricTensor{Float64, 4}, 7)
       x[7,4,3,1] = 20.
       @test prod(map(i -> x[(1,3,4,7)[i]...], collect(permutations(1:4))) .== 20.)
-      issymetric(convert(Array, x))
+      issymetric(Array(x))
     end
 end
 
@@ -121,17 +121,17 @@ end
     @test diag(b1) ≈ [t1[fill(i, ndims(t1))...,] for i = 1:size(t1, 1)]
   end
   @testset "Elementwise operations" begin
-    @test convert(Array, b + b1) ≈ t + t1
-    @test convert(Array, b - b1) ≈ t - t1
+    @test Array(b + b1) ≈ t + t1
+    @test Array(b - b1) ≈ t - t1
   end
   @testset "Matrix--scalar operations" begin
-    @test convert(Array, b * 2.1) ≈ t * 2.1
-    @test convert(Array, b / 2.1) ≈ t / 2.1
-    @test convert(Array, b / 2) ≈ t / 2
-    @test convert(Array, b + 2.1) ≈ t .+ 2.1
-    @test convert(Array, b - 2.1) ≈ t .- 2.1
-    @test convert(Array, b + 2) ≈ t .+ 2
-    @test convert(Array, 2 + b) ≈ t .+ 2
+    @test Array(b * 2.1) ≈ t * 2.1
+    @test Array(b / 2.1) ≈ t / 2.1
+    @test Array(b / 2) ≈ t / 2
+    @test Array(b + 2.1) ≈ t .+ 2.1
+    @test Array(b - 2.1) ≈ t .- 2.1
+    @test Array(b + 2) ≈ t .+ 2
+    @test Array(2 + b) ≈ t .+ 2
   end
 end
 

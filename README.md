@@ -52,7 +52,7 @@ SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[1.0 1.0; 1.0 1.0] [
 From `SymmetricTensors{T, N}` to `Array{T, N}`
 
 ```julia
-julia> convert(Array, data::SymmetricTensors{T, N})
+julia> Array(st::SymmetricTensors{T, N})
 ```
 
 
@@ -109,6 +109,35 @@ julia> Random.seed!(42)
 
 julia> rand(SymmetricTensor{Float64, 2}, 2)
 SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
+
+```
+
+## getindex and setindex!
+
+```julia
+julia> using Random
+
+julia> Random.seed!(42)
+
+julia> st = rand(SymmetricTensor{Float64, 2}, 2)
+SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
+
+julia> st[1,2]
+0.4540291355871424
+
+julia> st[2,1]
+0.4540291355871424
+```
+`setindex!(st::SymmetricTensor, x::Float, mulind::Int...)` changes all symmetric tensor's elements indexed by `mulind` to `x`.
+
+```julia
+julia> st[1,2] = 10.
+
+julia> convert(Array, st)
+2×2 Array{Float64,2}:
+  0.533183  10.0      
+ 10.0        0.0176868
+
 ```
 
 ## Auxiliary function
@@ -145,33 +174,7 @@ julia> unfold(a, 3)
  5.0  6.0  7.0  8.0
 ```
 
-## getindex and setindex!
 
-```julia
-julia> using Random
-
-julia> Random.seed!(42)
-
-julia> st = rand(SymmetricTensor{Float64, 2}, 2)
-SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
-
-julia> st[1,2]
-0.4540291355871424
-
-julia> st[2,1]
-0.4540291355871424
-```
-setindex!(st::SymmetricTensor, x::Float, mulind::Int...) changes all symmetric tensor elements indexed by mulind to x.
-
-```julia
-julia> st[1,2] = 10.
-
-julia> convert(Array, st)
-2×2 Array{Float64,2}:
-  0.533183  10.0      
- 10.0        0.0176868
-
-```
 
 
 This project was partially financed by the National Science Centre, Poland – project number 2014/15/B/ST6/05204.
