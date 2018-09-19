@@ -1,5 +1,3 @@
-VERSION >= v"0.6.0-dev+6521"
-
 module SymmetricTensors
   using Combinatorics
   using Base.Cartesian
