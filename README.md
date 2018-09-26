@@ -1,7 +1,7 @@
 # SymmetricTensors.jl
 [![Build Status](https://travis-ci.org/ZKSI/SymmetricTensors.jl.svg?branch=master)](https://travis-ci.org/ZKSI/SymmetricTensors.jl)
 [![Coverage Status](https://coveralls.io/repos/github/ZKSI/SymmetricTensors.jl/badge.svg?branch=master)](https://coveralls.io/github/ZKSI/SymmetricTensors.jl?branch=master)
-[![DOI](https://zenodo.org/badge/79091776.svg)](https://zenodo.org/badge/latestdoi/79091776)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1421596.svg)](https://doi.org/10.5281/zenodo.1421596)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
 without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `Union{Array{Float,N}, Nothing}` structure.
