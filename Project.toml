@@ -1,5 +1,5 @@
 name = "SymmetricTensors"
-uuid = "78809123-8871-4e92-bf96-c150e02a1f9a"
+uuid = "1ab33d94-6c6c-50cc-93f0-e3f623a46aa0"
 authors = ["Krzysztof Domino <kdomino@iitis.pl>", "Łukasz Pawela <lpawela@iitis.pl>", "Piotr Gawron <gawron@iitis.pl>"]
 version = "1.0.1"
 
