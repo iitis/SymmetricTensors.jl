@@ -1,0 +1,17 @@
+name = "SymmetricTensors"
+uuid = "78809123-8871-4e92-bf96-c150e02a1f9a"
+authors = ["Krzysztof Domino <kdomino@iitis.pl>", "Łukasz Pawela <lpawela@iitis.pl>", "Piotr Gawron <gawron@iitis.pl>"]
+version = "1.0.1"
+
+[deps]
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+
+[compat]
+julia = "0.7, 1.0, 1.1, 1.2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
