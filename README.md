@@ -16,7 +16,7 @@ Within Julia, just use run
 pkg> add SymmetricTensors
 ```
 
-to install the files. Julia 0.7 or later is required.
+to install the files. Julia 1.0 or later is required.
 
 
 ## Constructor
