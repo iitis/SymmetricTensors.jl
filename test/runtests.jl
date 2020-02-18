@@ -94,9 +94,9 @@ end
       y = rand(SymmetricTensor{Float64, 3}, 7)
       setindexunsafe!(x, 10000., 1,1,2,2)
       setindexunsafe!(x, 100., 4,4,4,4)
-      setindexunsafe!(x, 200., 3,5,6,7)
+      setindexunsafe!(x, 200., 1,3,5,7)
       @test prod(map(i -> x[(1,1,2,2)[i]...], collect(permutations(1:4))) .== 10000.)
-      @test prod(map(i -> x[(3,5,6,7)[i]...], collect(permutations(1:4))) .== 200.)
+      @test prod(map(i -> x[(1,3,5,7)[i]...], collect(permutations(1:4))) .== 200.)
       @test x[4,4,4,4] == 100.
       issymetric(Array(x))
       setindexunsafe!(y, 10000., 1,2,3)
