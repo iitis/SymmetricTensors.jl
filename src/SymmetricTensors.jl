@@ -5,6 +5,10 @@ module SymmetricTensors
   using Random
   using LinearAlgebra
   import Base: +, -, *, /, size, getindex, rand, setindex!
+  if VERSION >= v"1.3"
+   using CompilerSupportLibraries_jll
+ end
+ 
 
   const ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N} where {T<:AbstractFloat, N}
   function arraynarrays(T::Type, dims...)
