@@ -183,8 +183,7 @@ julia> unfold(a, 3)
 
 ## Motivation of the block usage
 
-The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetryin tensors for high performance: Multiplication with symmetric tensors", SIAM Journal on Scientific Computing, 36 (2014), pp. C453–C479 	https://doi.org/10.1137/130907215 
-Here only the meaningfull part of the symmetric tensor is stored in blocks to dectrease the memory and computational overhead.
+The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetry in tensors for high performance: Multiplication with symmetric tensors", SIAM Journal on Scientific Computing, 36 (2014), pp. C453–C479 https://doi.org/10.1137/130907215. There only the meaningful part of the symmetric tensor is stored in blocks to decrease the memory and computational overhead. The selection of the optimal block size is not straight forward, however in most cases concerning cumulants one can use `2` or `3`.
 
 
 
