@@ -183,7 +183,7 @@ julia> unfold(a, 3)
 
 ## Motivation of the block usage
 
-The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetryin tensors for high performance: Multiplication with symmetric tensors", SIAM Journal onScientific Computing, 36 (2014), pp. C453–C479 	https://doi.org/10.1137/130907215 
+The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetryin tensors for high performance: Multiplication with symmetric tensors", SIAM Journal on Scientific Computing, 36 (2014), pp. C453–C479 	https://doi.org/10.1137/130907215 
 Here only the meaningfull part of the symmetric tensor is stored in blocks to dectrease the memory and computational overhead.
 
 
