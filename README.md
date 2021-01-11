@@ -37,7 +37,7 @@ From `Array{T, N}` to `SymmetricTensors{T, N}`
 ```julia
 julia> SymmetricTensors(data::Array{T, N}, bls::Int = 2)
 ```
-where bls is the size of a block, one requires `bls \in {1, 2,..., dats}` where `dats = size(data, 1), ..., size(data, N)`
+where bls is the size of a block, one requires `bls \in {1, 2,..., dats}` where `dats = size(data, 1) = ... = size(data, N)`
 
 
 ```julia
