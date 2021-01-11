@@ -37,7 +37,7 @@ From `Array{T, N}` to `SymmetricTensors{T, N}`
 ```julia
 julia> SymmetricTensors(data::Array{T, N}, bls::Int = 2)
 ```
-where bls is the size of a block, one requires `bls \in {1, 2,..., dats}` where `dats = size(data, 1) = ... = size(data, N)`
+where bls is the size of a block. It is a parameter affecting the compuational speed of cumulants. The block size must fulfill `bls ∈ {1, 2,..., dats}` where `dats = size(data, 1) = ... = size(data, N)` otherwise error is risen.
 
 
 ```julia
@@ -53,6 +53,13 @@ From `SymmetricTensors{T, N}` to `Array{T, N}`
 
 ```julia
 julia> Array(st::SymmetricTensors{T, N})
+```
+
+Wrong block size:
+
+```
+julia> SymmetricTensor(ones(4,4), 5)
+ERROR: DimensionMismatch("bad block size 5 > 4")
 ```
 
 
