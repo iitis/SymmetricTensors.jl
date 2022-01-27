@@ -77,14 +77,14 @@ end
   @test fixpointperms((1,2,3,4)) == [[1,2,3,4]]
   Random.seed!(42)
   aa = Array(rand(SymmetricTensor{Float64, 4}, 3))
-  tt = cat([0.533183 0.454029; 0.454029 0.0176868], [0.454029 0.0176868; 0.0176868 0.172933], dims = 3)
-  #@test aa ≈ tt atol=1.0e-5
   issymetric(aa)
   @test aa == permutedims(aa, (2,1,3,4)) == permutedims(aa, (2,3,1,4)) == permutedims(aa, (4,3,1,2))
   @test aa[:,:,1,1] == transpose(aa[:,:,1,1])
   Random.seed!(42)
-  @test randblock(Float64, (2,2), (1,1)) ≈ [0.533183  0.454029; 0.454029  0.0176868] atol=1.0e-5
-  @test randblock(Float64, (2,2), (1,2)) ≈ [0.172933  0.973566; 0.958926  0.30387] atol=1.0e-5
+  if VERSION <= v"1.7"
+    @test randblock(Float64, (2,2), (1,1)) ≈ [0.533183  0.454029; 0.454029  0.0176868] atol=1.0e-5
+    @test randblock(Float64, (2,2), (1,2)) ≈ [0.172933  0.973566; 0.958926  0.30387] atol=1.0e-5
+  end
 end
 
 @testset "Seting value" begin
