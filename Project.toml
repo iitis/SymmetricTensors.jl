@@ -12,8 +12,9 @@ CompilerSupportLibraries_jll = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 
 [compat]
 julia = "1"
-Combinatorics = "0.7, 1"
-StatsBase = "0.32, 0.33"
+Combinatorics = "1"
+StatsBase = "0.33"
+#CompilerSupportLibraries_jll = "0.3, 0.4, 0.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
