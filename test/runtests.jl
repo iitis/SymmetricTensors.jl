@@ -38,6 +38,28 @@ Random.seed!(42)
 t = randsymarray(7, 3)
 t1 = randsymarray(7, 3)
 
+@testset "Indices" begin
+  st = SymmetricTensor(t, 3)
+  @testset "Size" begin
+    @test size(st) == (7, 7, 7)
+  end
+  @testset "Pyramid indices" begin
+    pinds = pyramidindices(3, 7)
+    found = 0
+
+    for i in 1:7
+      for j in i:7
+        for k in j:7
+          if (i, j, k) in pinds
+            found += 1
+          end
+        end
+      end
+    end
+    @test found == length(pinds)
+    @test pyramidindices(st) == pinds
+  end
+end
 
 @testset "Converting" begin
   b = SymmetricTensor(t, 3)
