@@ -128,6 +128,13 @@ function pyramidindices(dims::Int, tensize::Int)
 end
 
 """
+    pyramidindices(st::SymmetricTensor)
+
+Return the indices of the unique element of the give symmetric tensor.
+"""
+pyramidindices(st::SymmetricTensor{<:Any, N}) where N = pyramidindices(N, st.dats)
+
+"""
 
     sizetest(dats::Int, bls::Int)
 
@@ -158,6 +165,13 @@ function getblock(st::SymmetricTensor, mulind::Tuple)
   ind = sortperm([mulind...])
   permutedims(getblockunsafe(st, mulind[ind]), invperm(ind))
 end
+
+"""
+    size(st::SymmetricTensor)
+
+Return the size of a symmetric tensor.
+"""
+size(st::SymmetricTensor{<:Any, N}) where N = ntuple(i -> st.dats, N)
 
 """
     getindex(st::SymmetricTensor, mulind::Tuple)

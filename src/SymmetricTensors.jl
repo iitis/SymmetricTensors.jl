@@ -24,5 +24,5 @@ module SymmetricTensors
   include("randgendat.jl")
 
   export SymmetricTensor, convert, +, -, *, /, unfold, diag, rand,
-         ArrayNArrays, arraynarrays, setindex!
+         ArrayNArrays, arraynarrays, setindex!, pyramidindices
 end
