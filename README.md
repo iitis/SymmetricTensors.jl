@@ -133,7 +133,18 @@ julia> st[1,2]
 
 julia> st[2,1]
 0.4540291355871424
+
+
+julia> pyramidindices(st)
+3-element Vector{Tuple{Int64, Int64}}:
+ (1, 1)
+ (1, 2)
+ (2, 2)
+
 ```
+Function ```pyramidindices(st::SymmetricTensor)``` returns the indices of the unique element of the give symmetric tensor
+
+
 `setindex!(st::SymmetricTensor, x::Float, mulind::Int...)` changes all symmetric tensor's elements indexed by `mulind` to `x`.
 
 ```julia
