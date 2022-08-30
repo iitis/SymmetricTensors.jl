@@ -1,7 +1,7 @@
 name = "SymmetricTensors"
 uuid = "1ab33d94-6c6c-50cc-93f0-e3f623a46aa0"
 authors = ["Krzysztof Domino <kdomino@iitis.pl>", "Łukasz Pawela <lpawela@iitis.pl>", "Piotr Gawron <gawron@iitis.pl>"]
-version = "1.0.4"
+version = "1.0.5"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
