@@ -1,6 +1,6 @@
 # SymmetricTensors.jl
 [![Coverage Status](https://coveralls.io/repos/github/iitis/SymmetricTensors.jl/badge.svg?branch=master)](https://coveralls.io/github/iitis/SymmetricTensors.jl?branch=master)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3430780.svg)](https://doi.org/10.5281/zenodo.3430780)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7034097.svg)](https://doi.org/10.5281/zenodo.7034097)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
 without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `Union{Array{Float,N}, Nothing}` structure.
