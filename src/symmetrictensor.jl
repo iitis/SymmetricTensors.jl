@@ -1,5 +1,5 @@
 """
-    U(frame, bls, bln, dats, sqr)
+    SymmetricTensor(frame, bls, bln, dats, sqr)
 
 Construct a symmetric tensor.
 
