@@ -1,10 +1,14 @@
-"""Type constructor
+"""
+    U(frame, bls, bln, dats, sqr)
 
-frame - stores ArrayNArrays{T,N}
-bls - Int, size of ordinary block
-bln - Int, number of blocks
-datasize - Int, size of data stored (in each direction the same)
-sqr - Bool, is the last block size a same as ordinary's block size
+Construct a symmetric tensor.
+
+# Arguments
+- `frame::ArrayNArrays{T,N}`: raw data.
+- `bls::Int`: size of ordinary block.
+- `bln::Int`: number of blocks.
+- `dats::Int`: size of data stored (the same in each direction).
+- `sqr::Bool`: the last block size a same as ordinary's block size.
 """
 mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
