@@ -4,11 +4,11 @@
 Construct a symmetric tensor.
 
 # Arguments
-- `frame::ArrayNArrays{T,N}`: raw data.
-- `bls::Int`: size of ordinary block.
-- `bln::Int`: number of blocks.
-- `dats::Int`: size of data stored (the same in each direction).
-- `sqr::Bool`: the last block size a same as ordinary's block size.
+- `frame::ArrayNArrays{T,N}`: the raw data.
+- `bls::Int`: the size of ordinary block.
+- `bln::Int`: the number of blocks.
+- `dats::Int`: the size of data stored (the same in each direction).
+- `sqr::Bool`: if the last block is squared.
 """
 mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
