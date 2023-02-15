@@ -66,9 +66,28 @@ ERROR: DimensionMismatch("bad block size 5 > 4")
 
 - `frame::ArrayNArrays{T,N}`: stores data, where `ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N}`
 - `bls::Int`: the size of ordinary block (the same in each direction),
-- `bln::Int`: the number of blocks,
+- `bln::Int`: maximal number of blocks in each direction,
 - `dats::Int`: the size of data stored (the same in each direction),
-- `sqr::Bool`: if last blocks are squares (N-squares).
+- `sqr::Bool`: if all blocks are squares (N-squares).
+
+
+Suppose we have `N = 2` and `dats = 6` and `bls = 3` hence data are symmetric matrix of size `6 x 6`. Data ore stored in the form:
+
+|B11   B12 |
+|null  B22 |
+
+here `bls = 2` and size of `B11`, `B12`, and `B22` are `3 x 3`. Bear in mind, that `B11` and `B22` his to be symmetric. As `B12` (the last block) is square, `sqr = True`.
+
+Suppose now `N = 2` and `dats = 5` and `bls = 3` hence data are symmetric matrix of size `5 x 5`. Data are stored in similar form:
+
+|B11   B12 |
+|null  B22 |
+
+here `bls = 2` and size of `B11` is `3 x 3`, but size of `B12` is `2 x 3`, and size `B22` is `2 x 2 `. Again `B11` and `B22` his to be symmetric. As `B12` (the last block) is not square, `sqr = False`.
+
+For `N = 3` we have analogical pyramid representation, and for `N > 3` hyper-pyramid representation.
+
+
 
 ## Operations
 
