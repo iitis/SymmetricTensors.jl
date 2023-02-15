@@ -65,10 +65,10 @@ ERROR: DimensionMismatch("bad block size 5 > 4")
 ## Fields
 
 - `frame::ArrayNArrays{T,N}`: stores data, where `ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N}`
-- `bls::Int`: size of a block,
-- `bln::Int`: number of blocks,
-- `dats::Int`: size of data,
-- `sqr::Bool`: shows if the last block is squared.
+- `bls::Int`: the size of ordinary block (the same in each direction),
+- `bln::Int`: the number of blocks,
+- `dats::Int`: the size of data stored (the same in each direction),
+- `sqr::Bool`: if last blocks are squares (N-squares).
 
 ## Operations
 
