@@ -106,15 +106,42 @@ julia> diag(st)
 
 ## Random Symmetric Tensor generation
 
-To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here n denotes data size and b denotes block size.
+To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here `n` denotes size of each mode and `b` denotes block size. Eg. for `N = 4` we would have `n x n x n x n` tensor.
 
 ```julia
 julia> using Random
 
 julia> Random.seed!(42)
 
-julia> rand(SymmetricTensor{Float64, 2}, 2)
-SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
+julia> x = rand(SymmetricTensor{Float64, 3}, 2)
+SymmetricTensor{Float64, 3}(Union{Nothing, Array{Float64, 3}}[[0.5331830160438613 0.4540291355871424; 0.4540291355871424 0.017686826714964354]
+
+[0.4540291355871424 0.017686826714964354; 0.017686826714964354 0.17293302893695128]], 2, 1, 2, true)
+
+julia> Array(x)
+2×2×2 Array{Float64, 3}:
+[:, :, 1] =
+ 0.533183  0.454029
+ 0.454029  0.0176868
+
+[:, :, 2] =
+ 0.454029   0.0176868
+ 0.0176868  0.172933
+
+
+```
+
+```julia
+julia> Random.seed!(42)
+
+julia> x = rand(SymmetricTensor{Float64, 2}, 3)
+SymmetricTensor{Float64, 2}(Union{Nothing, Matrix{Float64}}[[0.5331830160438613 0.4540291355871424; 0.4540291355871424 0.017686826714964354] [0.17293302893695128; 0.9589258763297348]; nothing [0.9735659798036858]], 2, 2, 3, false)
+
+julia> Array(x)
+3×3 Matrix{Float64}:
+ 0.533183  0.454029   0.172933
+ 0.454029  0.0176868  0.958926
+ 0.172933  0.958926   0.973566
 
 ```
 
