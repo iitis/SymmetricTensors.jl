@@ -82,7 +82,7 @@ here `bls = 2` and size of `B11`, `B12`, and `B22` are `3 x 3`. Bear in mind, th
 
 Suppose now `N = 2` and `dats = 5` and `bls = 3` hence data are symmetric matrix of size `5 x 5`. Data are stored in similar form:
 
-``
+```
 |B11   B12 | 
 |null  B22 | 
 ```
