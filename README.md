@@ -74,6 +74,7 @@ ERROR: DimensionMismatch("bad block size 5 > 4")
 Suppose we have `N = 2` and `dats = 6` and `bls = 3` hence data are symmetric matrix of size `6 x 6`. Data ore stored in the form:
 
 |B11   B12 |
+
 |null  B22 |
 
 here `bls = 2` and size of `B11`, `B12`, and `B22` are `3 x 3`. Bear in mind, that `B11` and `B22` his to be symmetric. As `B12` (the last block) is square, `sqr = True`.
@@ -81,6 +82,7 @@ here `bls = 2` and size of `B11`, `B12`, and `B22` are `3 x 3`. Bear in mind, th
 Suppose now `N = 2` and `dats = 5` and `bls = 3` hence data are symmetric matrix of size `5 x 5`. Data are stored in similar form:
 
 |B11   B12 |
+
 |null  B22 |
 
 here `bls = 2` and size of `B11` is `3 x 3`, but size of `B12` is `2 x 3`, and size `B22` is `2 x 2 `. Again `B11` and `B22` his to be symmetric. As `B12` (the last block) is not square, `sqr = False`.
