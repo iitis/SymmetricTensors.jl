@@ -5,10 +5,10 @@ Construct a symmetric tensor.
 
 # Arguments
 - `frame::ArrayNArrays{T,N}`: the raw data.
-- `bls::Int`: the size of ordinary block.
+- `bls::Int`: the size of ordinary block (the same in each direction).
 - `bln::Int`: the number of blocks.
 - `dats::Int`: the size of data stored (the same in each direction).
-- `sqr::Bool`: if the last block is squared.
+- `sqr::Bool`: if last blocks are squares (N-squares).
 """
 mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
@@ -84,8 +84,8 @@ end
 
 Throw an `AssertionError` if:
 - all sizes of nullable array are not equal, or
-- at least some undergiagonal blocks are not null, or
-- some blocks (not the last one) are not squared, or
+- some undergiagonal blocks are not null, or
+- some blocks (not the last ones) are not squares (N-squares), or
 - some diagonal blocks are not symmetric.
 """
 function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
@@ -168,7 +168,7 @@ getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...]
 
 Return a block from `st`.
         
-It also works for all multi-indices which are not sorted.
+It also works for multi-indices which are not sorted.
 """
 function getblock(st::SymmetricTensor, mulind::Tuple)
   ind = sortperm([mulind...])
