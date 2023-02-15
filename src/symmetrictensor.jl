@@ -6,9 +6,9 @@ Construct a symmetric tensor.
 # Arguments
 - `frame::ArrayNArrays{T,N}`: the raw data.
 - `bls::Int`: the size of ordinary block (the same in each direction).
-- `bln::Int`: the number of blocks.
+- `bln::Int`: maximal number of blocks in each direction.
 - `dats::Int`: the size of data stored (the same in each direction).
-- `sqr::Bool`: if last blocks are squares (N-squares).
+- `sqr::Bool`: if all blocks are squares (N-squares).
 """
 mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
