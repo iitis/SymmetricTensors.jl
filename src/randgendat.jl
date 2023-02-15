@@ -47,7 +47,7 @@ end
 """
     randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int})
 
-Return a block of size `dims` and position `j` by a series of uniformly distributed random numbers
+Return a block of size `dims` and position `j` filled with a series of uniformly distributed random numbers
 of type `T`.
 """
 function randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int}) where {T<:Real, N}
