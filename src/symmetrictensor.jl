@@ -116,7 +116,7 @@ julia> pyramidindices(2,3)
  (3,3)
 ```
 """
-function pyramidindices(dims::Int, tensize::Int)
+@memoize function pyramidindices(dims::Int, tensize::Int)
     multinds = Tuple{fill(Int,dims)...,}[]
     @eval begin
         @nloops $dims i x -> (x==$dims) ? (1:$tensize) : (i_{x+1}:$tensize) begin
