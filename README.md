@@ -1,6 +1,6 @@
 # SymmetricTensors.jl
 [![Coverage Status](https://coveralls.io/repos/github/iitis/SymmetricTensors.jl/badge.svg?branch=master)](https://coveralls.io/github/iitis/SymmetricTensors.jl?branch=master)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7034097.svg)](https://doi.org/10.5281/zenodo.7034097)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7646680.svg)](https://doi.org/10.5281/zenodo.7646680)
 
 SymmetricTensors.jl provides the `SymmetricTensors{T, N}` type used to store fully symmetric tensors in more efficient way,
 without most of redundant repetitions. It uses blocks of `Array{T, N}` stored in `Union{Array{Float,N}, Nothing}` structure.
@@ -65,10 +65,33 @@ ERROR: DimensionMismatch("bad block size 5 > 4")
 ## Fields
 
 - `frame::ArrayNArrays{T,N}`: stores data, where `ArrayNArrays{T,N} = Array{Union{Array{T, N}, Nothing}, N}`
-- `bls::Int`: size of a block,
-- `bln::Int`: number of blocks,
-- `dats::Int`: size of data,
-- `sqr::Bool`: shows if the last block is squared.
+- `bls::Int`: the size of ordinary block (the same in each direction),
+- `bln::Int`: maximal number of blocks in each direction,
+- `dats::Int`: the size of data stored (the same in each direction),
+- `sqr::Bool`: if all blocks are squares (N-squares).
+
+
+Suppose we have `N = 2` and `dats = 6` and `bls = 3` hence data are symmetric matrix of size `6 x 6`. Data are stored in the form:
+
+```
+|B11   B12 | 
+|null  B22 | 
+```
+
+here `bls = 2` and size of `B11`, `B12`, and `B22` are `3 x 3`. Bear in mind, that `B11` and `B22` his to be symmetric. As `B12` (the last block) is square, `sqr = True`.
+
+Suppose now `N = 2` and `dats = 5` and `bls = 3` hence data are symmetric matrix of size `5 x 5`. Data are stored in similar form:
+
+```
+|B11   B12 | 
+|null  B22 | 
+```
+
+here `bls = 2` and size of `B11` is `3 x 3`, but size of `B12` is `2 x 3`, and size `B22` is `2 x 2 `. Again `B11` and `B22` his to be symmetric. As `B12` (the last block) is not square, `sqr = False`.
+
+For `N = 3` we have analogical pyramid representation, and for `N > 3` hyper-pyramid representation.
+
+
 
 ## Operations
 
@@ -106,15 +129,42 @@ julia> diag(st)
 
 ## Random Symmetric Tensor generation
 
-To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here n denotes data size and b denotes block size.
+To generate random Symmetric Tensor with random elements of typer `T` form a uniform distribution on `[0,1)` use `rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)`. Here `n` denotes size of each mode and `b` denotes block size. Eg. for `N = 4` we would have `n x n x n x n` tensor.
 
 ```julia
 julia> using Random
 
 julia> Random.seed!(42)
 
-julia> rand(SymmetricTensor{Float64, 2}, 2)
-SymmetricTensor{Float64,2}(Union{Nothing, Array{Float64,2}}[[0.533183 0.454029; 0.454029 0.0176868]], 2, 1, 2, true)
+julia> x = rand(SymmetricTensor{Float64, 3}, 2)
+SymmetricTensor{Float64, 3}(Union{Nothing, Array{Float64, 3}}[[0.5331830160438613 0.4540291355871424; 0.4540291355871424 0.017686826714964354]
+
+[0.4540291355871424 0.017686826714964354; 0.017686826714964354 0.17293302893695128]], 2, 1, 2, true)
+
+julia> Array(x)
+2×2×2 Array{Float64, 3}:
+[:, :, 1] =
+ 0.533183  0.454029
+ 0.454029  0.0176868
+
+[:, :, 2] =
+ 0.454029   0.0176868
+ 0.0176868  0.172933
+
+
+```
+
+```julia
+julia> Random.seed!(42)
+
+julia> x = rand(SymmetricTensor{Float64, 2}, 3)
+SymmetricTensor{Float64, 2}(Union{Nothing, Matrix{Float64}}[[0.5331830160438613 0.4540291355871424; 0.4540291355871424 0.017686826714964354] [0.17293302893695128; 0.9589258763297348]; nothing [0.9735659798036858]], 2, 2, 3, false)
+
+julia> Array(x)
+3×3 Matrix{Float64}:
+ 0.533183  0.454029   0.172933
+ 0.454029  0.0176868  0.958926
+ 0.172933  0.958926   0.973566
 
 ```
 
@@ -193,7 +243,10 @@ julia> unfold(a, 3)
 
 ## Block structure
 
-The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetry in tensors for high performance: Multiplication with symmetric tensors", SIAM Journal on Scientific Computing, 36 (2014), pp. C453–C479 https://doi.org/10.1137/130907215. There only the meaningful part of the symmetric tensor is stored in blocks to decrease the memory and computational overhead. The selection of the optimal block size is not straight forward, however in most cases concerning cumulants one can use `2` or `3`.
+The block usage is motivated by the paper M. D. Schatz, T. M. Low, R. A. van de Geijn, and T. G. Kolda, "Exploiting symmetry in tensors for high performance: Multiplication with symmetric tensors", SIAM Journal on Scientific Computing, 36 (2014), pp. C453–C479 https://doi.org/10.1137/130907215. There only the meaningful part of the symmetric tensor is stored in blocks to decrease the memory and computational overhead. 
+
+For application of this representation to compute cumulants, see: K. Domino, P. Gawron, Ł. Pawela "Efficient Computation of Higher-Order Cumulant Tensors", 
+SIAM Journal on Scientific Computing, 40 (2018) https://doi.org/10.1137/17M1149365. The selection of the optimal block size is not straight forward, however in most cases concerning cumulants one can use `2` or `3`.
 
 
 

@@ -1,10 +1,14 @@
-"""Type constructor
+"""
+    SymmetricTensor(frame, bls, bln, dats, sqr)
 
-frame - stores ArrayNArrays{T,N}
-bls - Int, size of ordinary block
-bln - Int, number of blocks
-datasize - Int, size of data stored (in each direction the same)
-sqr - Bool, is the last block size a same as ordinary's block size
+Construct a symmetric tensor.
+
+# Arguments
+- `frame::ArrayNArrays{T,N}`: the raw data.
+- `bls::Int`: the size of ordinary block (the same in each direction).
+- `bln::Int`: maximal number of blocks in each direction.
+- `dats::Int`: the size of data stored (the same in each direction).
+- `sqr::Bool`: if all blocks are squares (N-squares).
 """
 mutable struct SymmetricTensor{T <: AbstractFloat, N}
     frame::ArrayNArrays{T,N}
@@ -26,9 +30,9 @@ mutable struct SymmetricTensor{T <: AbstractFloat, N}
 end
 
 """
-  unfold(ar::Array{N}, mode::Int)
+    unfold(ar::Array{T,N}, mode::Int)
 
-Returns an matrix being an unfold of N dims array in given mode.
+Return a matrix being an unfold of `N` dimensional array in a given mode.
 
 ```jldoctest
 julia> A = reshape(collect(1.:8.), 2, 2, 2);
@@ -38,15 +42,15 @@ julia> unfold(A, 1)
  1.0  3.0  5.0  7.0
  2.0  4.0  6.0  8.0
 
- julia> unfold(A, 2)
- 2×4 Array{Float64,2}:
-  1.0  2.0  5.0  6.0
-  3.0  4.0  7.0  8.0
+julia> unfold(A, 2)
+2×4 Array{Float64,2}:
+ 1.0  2.0  5.0  6.0
+ 3.0  4.0  7.0  8.0
 
-  julia> unfold(A, 3)
-  2×4 Array{Float64,2}:
-   1.0  2.0  3.0  4.0
-   5.0  6.0  7.0  8.0
+julia> unfold(A, 3)
+2×4 Array{Float64,2}:
+ 1.0  2.0  3.0  4.0
+ 5.0  6.0  7.0  8.0
 ```
 """
 function unfold(ar::Array{T,N}, mode::Int) where {T <: Real, N}
@@ -58,9 +62,9 @@ end
 
 
 """
-  issymetric(ar::Array{N}, atol::Float64)
+    issymetric(ar::Array, atol::Float64)
 
-Returns: Assertion Error if not symmetric given a tolerance.
+Throw an `AssertionError` if `ar` is not symmetric under a given tolerance.
 
 ```jldoctest
 julia> A = reshape(collect(1.:8.), 2, 2, 2);
@@ -76,11 +80,13 @@ function issymetric(ar::Array{T, N}, atol::Float64 = 1e-7) where {T <: AbstractF
 end
 
 """
-  frtest(data::ArrayNArrays{T,N})
+    frtest(data::ArrayNArrays{T,N})
 
-Returns assertion error if: all sizes of nullable array not equal, at least
-  some undergiagonal block not null, some blocks (not last) not squared,
-  some diagonal blocks not symmetric.
+Throw an `AssertionError` if:
+- all sizes of nullable array are not equal, or
+- some undergiagonal blocks are not null, or
+- some blocks (not the last ones) are not squares (N-squares), or
+- some diagonal blocks are not symmetric.
 """
 function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
   bln = size(data, 1)
@@ -103,7 +109,7 @@ function frtest(data::ArrayNArrays{T,N}) where {T <: AbstractFloat, N}
 end
 
 """
-  pyramidindices(dims::Int, tensize::Int)
+    pyramidindices(dims::Int, tensize::Int)
 
 ```jldoctest
 julia> pyramidindices(2,3)
@@ -130,15 +136,14 @@ end
 """
     pyramidindices(st::SymmetricTensor)
 
-Return the indices of the unique element of the give symmetric tensor.
+Return the indices of the unique elements of the given symmetric tensor.
 """
 pyramidindices(st::SymmetricTensor{<:Any, N}) where N = pyramidindices(N, st.dats)
 
 """
-
     sizetest(dats::Int, bls::Int)
 
-Returns: DimensionMismatch if blocks size is grater than data size.
+Throw a `DimensionMismatch` if the block size is grater than the data size.
 
 ```jldoctest
 julia> SymmetricTensors.sizetest(2,3)
@@ -149,9 +154,11 @@ sizetest(dats::Int, bls::Int) =
   (dats >= bls > 0)|| throw(DimensionMismatch("bad block size $bls > $dats"))
 
 """
-  getblockunsafe(st::SymmetricTensor, i::Tuple)
+    getblockunsafe(st::SymmetricTensor, i::Tuple)
 
-Returns a block from Symmetric Tensor, unsafe works only if multi-index is sorted
+Return a block from `st`.
+    
+It is unsafe and works only if multi-indices are sorted.
 """
 getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...]
 
@@ -159,7 +166,9 @@ getblockunsafe(st::SymmetricTensor, mulind::Tuple) = st.frame[mulind...]
 """
     getblock(st::SymmetricTensor, i::Tuple)
 
-Returns a block from Symmetric Tensor, works for all multi-indices also not sorted
+Return a block from `st`.
+        
+It also works for multi-indices which are not sorted.
 """
 function getblock(st::SymmetricTensor, mulind::Tuple)
   ind = sortperm([mulind...])
@@ -176,7 +185,7 @@ size(st::SymmetricTensor{<:Any, N}) where N = ntuple(i -> st.dats, N)
 """
     getindex(st::SymmetricTensor, mulind::Tuple)
 
-Returns a Symmetric Tensor element for a given multi-index
+Return the element in `st` with a given multi-index.
 """
 function getindex(st::SymmetricTensor, mulind::Int...)
   b = st.bls
@@ -186,9 +195,9 @@ function getindex(st::SymmetricTensor, mulind::Int...)
 end
 
 """
-    setindexunsafe!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...)
+    setindexunsafe!(st::SymmetricTensor{T,N}, x::T, mulind::Int...)
 
-Unsafe change a SymmetricTensors value at the given multi-index
+Change the value at the given multi-index of `st` unsafely.
 """
 function setindexunsafe!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...) where {T <: AbstractFloat, N}
     b = st.bls
@@ -206,28 +215,29 @@ end
 """
     setindex!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...)
 
-Change a SymmetricTensors value at the given multi-index
+Change the value at the given multi-index of `st` if possible.
 """
 function setindex!(st::SymmetricTensor{T,N}, x::T,  mulind::Int...) where {T <: AbstractFloat, N}
     setindexunsafe!(st, x, sort([mulind...])...)
 end
-"""
 
+"""
     ind2range(i::Int, bls::Int, dats::Int)
 
-Returns a range given index i, size of a block and size of data
+Return a range given index `i`, size of a block `bls`, and size of data `dats`.
 
 ```jldoctest
-julia> ind2range(2,3,5)
+julia> ind2range(2, 3, 5)
 4:5
 ```
 """
 ind2range(i::Int, bls::Int, dats::Int) = (i-1)*bls+1: ((i*bls <= dats) ? i*bls : dats)
 
 """
-  SymmetricTensor(data::Array{N}, bls::Int)
+    SymmetricTensor(data::Array, bls::Int)
 
-Returns: data in SymmetricTensor form.
+Construct a `SymmetricTensor` from an `Array`.
+
 ```jldoctest
 julia> a = reshape(collect(1.:16.), 4, 4);
 
@@ -249,10 +259,9 @@ function SymmetricTensor(data::Array{T, N}, bls::Int = 2) where {T <: AbstractFl
 end
 
 """
-  Array(st::SymmetricTensor{N})
+    Array(st::SymmetricTensor{T,N})
 
-Return N dims array converted from SymmetricTensor type
-
+Return an `N` dimensional array converted from a `SymmetricTensor`.
 """
 function Array(st::SymmetricTensor{T,N}) where {T<:AbstractFloat, N}
   array = zeros(T, fill(st.dats, N)...,)
@@ -267,10 +276,9 @@ end
 # ---- basic operations on Symmetric Tensors ----
 
 """
-  diag(st::SymmetricTensor{N})
+    diag(st::SymmetricTensor)
 
-Return vector of floats, the super-diag of st
-
+Return the superdiagonal of `st`.
 """
 diag(st::SymmetricTensor{T,N}) where {T<: AbstractFloat, N} = map(i->st[fill(i, N)...,], 1:st.dats)
 

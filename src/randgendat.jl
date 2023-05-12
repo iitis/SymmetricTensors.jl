@@ -1,11 +1,10 @@
 # ---- generated SymmetricTensors ----
 
 """
-  randsymarray(T, dim ::Int, N::Int = 4)
+    randsymarray(::Type{T}, dim ::Int, N::Int = 4)
 
-Returns N-dimmensional random super-symmetric array with elements of type T drawn from uniform distribution on [0,1),
-dim denotes data size.
-
+Return an ``N``-dimmensional random super-symmetric array with elements of type `T` drawn from a uniform distribution on ``[0, 1)``,
+where `dim` denotes the data size.
 """
 function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
   t = zeros(fill(dim, N)...,)
@@ -19,22 +18,21 @@ function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
 end
 
 """
-  randsymarray(T, dim::Int, N::Int = 4)
+    randsymarray(dim::Int, N::Int = 4)
 
-Returns N-dimmensional random super-symmetric array with Float64 elements drawn from uniform distribution on [0,1),
-dim denotes data size.
-
+Return an ``N``-dimmensional random super-symmetric array with elements of type `Float64` drawn from a uniform distribution on ``[0, 1)``,
+where `dim` denotes the data size.
 """
 randsymarray(dim::Int, N::Int = 4) = randsymarray(Float64, dim, N)
 
 
 """
+    fixpointperms(j::NTuple{N, Int})
 
-  fixpointperms(j::NTuple{N, Int}) where N
+Return a vector of vectors, which is a fixed-point permutation of given multi-indices.
 
-Returns Vactor{Vector}, a fix point permutation of given multiindex
-
-TODO: this is a naive implementation
+!!! note
+    This is a naive implementation.
 """
 function fixpointperms(j::NTuple{N, Int}) where N
   r = []
@@ -47,11 +45,10 @@ function fixpointperms(j::NTuple{N, Int}) where N
 end
 
 """
-  randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int})
+    randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int})
 
-Returns a block of size dims and position j by a uniformly distributed random number
-of type T
-
+Return a block of size `dims` and position `j` filled with a series of uniformly distributed random numbers
+of type `T`.
 """
 function randblock(::Type{T}, dims::NTuple{N, Int}, j::NTuple{N, Int}) where {T<:Real, N}
   t = zeros(dims)
@@ -71,11 +68,10 @@ end
 
 
 """
-rand(SymmetricTensor{T, N}, n::Int, b::Int = 2)
+    rand(::Type{SymmetricTensor{T, N}}, n::Int, b::Int = 2)
 
-Returns N-dimensional random SymmetricTensor with elements of type T drawn from uniform distribution on [0,1),
-n denotes data size and b denotes block size.
-
+Return an ``N``-dimmensional random `SymmetricTensor` with elements of type `T` drawn from a uniform distribution on ``[0, 1)``,
+where `n` denotes the data size and `b` denotes the block size.
 """
 function rand(::Type{SymmetricTensor{T, N}}, n::Int, b::Int = 2) where {T<:AbstractFloat, N}
   sizetest(n, b)
