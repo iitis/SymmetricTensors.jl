@@ -122,23 +122,16 @@ julia> pyramidindices(2,3)
  (3,3)
 ```
 """
-@memoize function pyramidindices(dims::Int, tensize::Int)
-    multinds = Tuple{fill(Int,dims)...,}[]
-    @eval begin
-        @nloops $dims i x -> (x==$dims) ? (1:$tensize) : (i_{x+1}:$tensize) begin
-            @inbounds multind = @ntuple $dims x -> i_{$dims-x+1}
-            push!($multinds, multind)
-        end
-    end
-    multinds
+function pyramidindices(dims::Int, tensize::Int)
+  quote
+      multinds = Tuple{fill(Int, dims)...,}[]
+      @nloops $dims i x -> (x==$dims) ? (1:tensize) : (i_{x+1}:tensize) begin
+          @inbounds multind = @ntuple $dims x -> i_{$dims-x+1}
+          push!(multinds, multind)
+      end
+      multinds
+  end
 end
-
-"""
-    pyramidindices(st::SymmetricTensor)
-
-Return the indices of the unique elements of the given symmetric tensor.
-"""
-pyramidindices(st::SymmetricTensor{<:Any, N}) where N = pyramidindices(N, st.dats)
 
 """
     sizetest(dats::Int, bls::Int)

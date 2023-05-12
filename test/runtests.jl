@@ -57,7 +57,6 @@ t1 = randsymarray(7, 3)
       end
     end
     @test found == length(pinds)
-    @test pyramidindices(st) == pinds
   end
 end
 

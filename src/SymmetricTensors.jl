@@ -4,7 +4,6 @@ module SymmetricTensors
   using StatsBase
   using Random
   using LinearAlgebra
-  using Memoization
   import Base: +, -, *, /, size, getindex, rand, setindex!
   if VERSION >= v"1.3"
    using CompilerSupportLibraries_jll
