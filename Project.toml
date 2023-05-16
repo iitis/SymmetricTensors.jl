@@ -9,13 +9,13 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 CompilerSupportLibraries_jll = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-Memoization = "6fafb56a-5788-4b4e-91ca-c0cea6611c73"
+
 
 [compat]
 julia = "1"
 Combinatorics = "1"
 StatsBase = "0.33"
-Memoization = "0.2"
+
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
