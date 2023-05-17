@@ -14,7 +14,7 @@ CompilerSupportLibraries_jll = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 [compat]
 julia = "1"
 Combinatorics = "1"
-StatsBase = "0.33"
+StatsBase = "0.33, 0.34"
 
 
 [extras]
