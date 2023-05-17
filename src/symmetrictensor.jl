@@ -29,6 +29,22 @@ mutable struct SymmetricTensor{T <: AbstractFloat, N}
     end
 end
 
+struct PyramidIndices{N}
+  size::Int
+end
+
+@generated function _all_indices(p::PyramidIndices{N}) where {N}
+  quote
+      multinds = Tuple{fill(Int, $N)...,}[]
+      tensize = p.size
+      @nloops $N i x -> (x==$N) ? (1:tensize) : (i_{x+1}:tensize) begin
+          @inbounds multind = @ntuple $N x -> i_{$N-x+1}
+          push!(multinds, multind)
+      end
+      multinds
+  end
+end
+
 """
     unfold(ar::Array{T,N}, mode::Int)
 
@@ -122,23 +138,10 @@ julia> pyramidindices(2,3)
  (3,3)
 ```
 """
-@memoize function pyramidindices(dims::Int, tensize::Int)
-    multinds = Tuple{fill(Int,dims)...,}[]
-    @eval begin
-        @nloops $dims i x -> (x==$dims) ? (1:$tensize) : (i_{x+1}:$tensize) begin
-            @inbounds multind = @ntuple $dims x -> i_{$dims-x+1}
-            push!($multinds, multind)
-        end
-    end
-    multinds
+function pyramidindices(dims::Int, tensize::Int)
+  p = PyramidIndices{dims}(tensize)
+  return _all_indices(p)
 end
-
-"""
-    pyramidindices(st::SymmetricTensor)
-
-Return the indices of the unique elements of the given symmetric tensor.
-"""
-pyramidindices(st::SymmetricTensor{<:Any, N}) where N = pyramidindices(N, st.dats)
 
 """
     sizetest(dats::Int, bls::Int)

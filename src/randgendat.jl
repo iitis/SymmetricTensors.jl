@@ -10,7 +10,7 @@ function randsymarray(::Type{T}, dim::Int, N::Int = 4) where T<:Real
   t = zeros(fill(dim, N)...,)
   for i in pyramidindices(N,dim)
     n = rand(T)
-    for j in collect(permutations(i))
+    for j in permutations(i)
         @inbounds t[j...] = n
     end
   end
